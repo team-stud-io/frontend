@@ -1,9 +1,10 @@
 // app/tutor/step2.tsx
 // AI 튜터 생성 화면2 - 시험 날짜 설정
 
-import { useRouter } from 'expo-router';
+import { type Href, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
+    Modal,
     Pressable,
     ScrollView,
     StyleSheet,
@@ -12,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button } from '../../components/Button';
+import { InputField } from '../../components/InputField';
 import { Colors } from '../../constants/colors';
 
 const SUBJECTS = [
@@ -46,6 +48,7 @@ function getDaysInMonth(year: number, month: number) {
 }
 
 type SubjectMap = Record<string, string[]>;
+type CustomSubjectMap = Record<string, string>;
 
 export default function Step2Screen() {
   const router = useRouter();
@@ -54,6 +57,8 @@ export default function Step2Screen() {
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDate, setSelectedDate] = useState<number | null>(null);
   const [subjectMap, setSubjectMap] = useState<SubjectMap>({});
+  const [customSubjects, setCustomSubjects] = useState<CustomSubjectMap>({});
+  const [showDirectInput, setShowDirectInput] = useState(false);
 
   const days = getDaysInMonth(year, month);
   const selectedKey = selectedDate ? `${year}-${month + 1}-${selectedDate}` : null;
@@ -79,6 +84,11 @@ export default function Step2Screen() {
   };
 
   const handleSubjectPress = (subjectId: string) => {
+    if (subjectId === 'custom') {
+      if (!selectedKey) return;
+      setShowDirectInput(true);
+      return;
+    }
     if (!selectedKey) return;
     const current = subjectMap[selectedKey] ?? [];
     if (current.includes(subjectId)) {
@@ -94,10 +104,25 @@ export default function Step2Screen() {
     return (subjectMap[key] ?? []).slice(0, 4).map(id => SUBJECTS.find(s => s.id === id)?.color ?? '#ccc');
   };
 
+  const handleCustomSubmit = (subjectName: string) => {
+    if (!selectedKey) return;
+    const current = subjectMap[selectedKey] ?? [];
+    if (current.length >= MAX_SUBJECTS) {
+      setShowDirectInput(false);
+      return;
+    }
+
+    const customId = `custom-${Date.now()}`;
+    setCustomSubjects(prev => ({ ...prev, [customId]: subjectName }));
+    setSubjectMap(prev => ({ ...prev, [selectedKey]: [...current, customId] }));
+    setShowDirectInput(false);
+  };
+
   const hasAnySelection = Object.values(subjectMap).some(v => v.length > 0);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+
+      <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backArrow}>←</Text>
@@ -184,6 +209,7 @@ export default function Step2Screen() {
                 return (
                   <Pressable
                     key={subject.id}
+                    disabled={isDisabled}
                     onPress={() => handleSubjectPress(subject.id)}
                     style={[
                       styles.subjectTag,
@@ -200,6 +226,25 @@ export default function Step2Screen() {
                   </Pressable>
                 );
               })}
+              {selectedSubjects
+                .filter(subjectId => subjectId.startsWith('custom-'))
+                .map(subjectId => (
+                  <Pressable
+                    key={subjectId}
+                    onPress={() => {
+                      if (!selectedKey) return;
+                      setSubjectMap(prev => ({
+                        ...prev,
+                        [selectedKey]: (prev[selectedKey] ?? []).filter(id => id !== subjectId),
+                      }));
+                    }}
+                    style={[styles.subjectTag, styles.subjectTagSelected]}
+                  >
+                    <Text style={[styles.subjectTagText, styles.subjectTagTextSelected]}>
+                      {customSubjects[subjectId]}
+                    </Text>
+                  </Pressable>
+                ))}
             </View>
           </View>
         )}
@@ -210,11 +255,21 @@ export default function Step2Screen() {
         <Button
           label={hasAnySelection ? '다음' : '건너뛰기'}
           state="Default"
-          onPress={() => {
-            // TODO: 다음 화면으로 이동
-          }}
+          onPress={() => router.push('/tutor/step3' as Href)}
         />
       </View>
+      <Modal
+        visible={showDirectInput}
+        transparent
+        animationType="slide"
+      >
+        <View style={styles.directInputBackdrop}>
+          <InputField
+            onSubmit={handleCustomSubmit}
+            onCancel={() => setShowDirectInput(false)}
+          />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -329,5 +384,10 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
     paddingTop: 12,
     backgroundColor: '#FFFFFF',
+  },
+  directInputBackdrop: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
 });

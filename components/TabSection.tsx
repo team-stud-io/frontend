@@ -39,7 +39,7 @@ export function TabSection({
 const styles = StyleSheet.create({
   root: {
     flexDirection: 'row',
-    width: 335,
+    width: '100%',
     height: 54,
     paddingVertical: 12,
     paddingHorizontal: 8,

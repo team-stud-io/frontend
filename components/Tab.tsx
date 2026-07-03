@@ -38,7 +38,6 @@ export function Tab({
           styles.label,
           state === 'Selected' && styles.labelSelected,
         ]}
-        numberOfLines={1}
       >
         {label}
       </Text>
@@ -49,7 +48,7 @@ export function Tab({
 const styles = StyleSheet.create({
   // 미선택 탭
   root: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -68,7 +67,7 @@ const styles = StyleSheet.create({
     color: Colors['Text.Normal.Assistive'],       // #A1A3A5
     textAlign: 'center',
     fontFamily: 'Pretendard-Medium',
-    fontSize: 16,
+    fontSize: 14,
     lineHeight: 24,
     letterSpacing: -0.2,
   },
