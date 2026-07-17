@@ -35,6 +35,6 @@ export function getTitle(step: ResultStep) {
 
 export function getButtonLabel(step: ResultStep) {
   if (step === 'summary') return '과목별 전략 보러가기';
-  if (step === 'plan') return '플래너에 반영하기';
-  return '플래너에 반영하기';
+  if (step === 'plan') return '홈 화면으로 가기';
+  return '홈 화면으로 가기';
 }
