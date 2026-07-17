@@ -1,223 +1,51 @@
-// app/index.tsx
-// AI 튜터 생성 화면1 - 기본 정보 입력
-// Unity 비유: 이 파일이 하나의 Scene이에요
-// useState = SerializeField (값을 저장하고 화면에 반영)
-// useRouter = SceneManager.LoadScene (화면 전환)
-
-import React, { useState } from 'react';
-import {
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    View,
-} from 'react-native';
-import { Button } from '../../components/Button';
-import { TabSection } from '../../components/TabSection';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { type Href, useRouter } from 'expo-router';
+import React from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { AuthActionButton, useAuthSignup } from '../../components/auth';
 import { Colors } from '../../constants/colors';
 
-// 각 탭 섹션의 선택지 데이터
-// Unity의 [SerializeField] string[] examTypes 같은 것
-const EXAM_TYPES = ['내신', '모의고사', '수능'];
-const SEMESTER_TYPES = ['1학기', '2학기'];
-const EXAM_PERIOD_TYPES = ['중간고사', '기말고사'];
+const CHARACTER = require('../../assets/additional/character-hello.png');
+const KAKAO_ICON = require('../../assets/additional/kakao-icon.png');
 
-export default function TutorCreateScreen() {
-  // 각 탭 섹션의 선택된 인덱스 상태
-  // Unity의 private int selectedExamIndex = 0; 과 동일
-  const [selectedExam, setSelectedExam] = useState(0);         // 시험 선택 (기본: 내신)
-  const [selectedSemester, setSelectedSemester] = useState(0); // 학기 선택 (기본: 1학기)
-  const [selectedPeriod, setSelectedPeriod] = useState(0);     // 고사 선택 (기본: 중간고사)
-  const [goal, setGoal] = useState('');                         // 목표 텍스트 입력값
-
-  // 다음 버튼 활성화 여부
-  // 목표를 입력했을 때만 활성화
-  const isNextEnabled = goal.trim().length > 0;
-
-  // 다음 버튼 눌렸을 때 처리
-  // 여기에 나중에 router.push('/tutor/step2') 같은 네비게이션 추가
-  const handleNext = () => {
-    if (!isNextEnabled) return;
-    console.log({
-      exam: EXAM_TYPES[selectedExam],
-      semester: SEMESTER_TYPES[selectedSemester],
-      period: EXAM_PERIOD_TYPES[selectedPeriod],
-      goal,
-    });
-    // TODO: 다음 화면으로 이동
-  };
-
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* 뒤로가기 버튼 */}
-        <Pressable style={styles.backButton} onPress={() => {}}>
-          <Text style={styles.backArrow}>←</Text>
-        </Pressable>
-
-        {/* 화면 제목 */}
-        <Text style={styles.title}>기본 정보 입력</Text>
-
-        {/* 폼 영역 */}
-        <View style={styles.form}>
-
-          {/* 시험 선택 탭 */}
-          <View style={styles.tabGroup}>
-            <Text style={styles.tabLabel}>시험 선택</Text>
-            <TabSection
-              tabs={EXAM_TYPES}
-              selectedIndex={selectedExam}
-              onTabPress={setSelectedExam}
-            />
-
-            {/* 내신 선택 시에만 학기/고사 탭 노출 */}
-            {/* Unity의 gameObject.SetActive(condition) 과 동일 */}
-            {selectedExam === 0 && (
-              <>
-                <TabSection
-                  tabs={SEMESTER_TYPES}
-                  selectedIndex={selectedSemester}
-                  onTabPress={setSelectedSemester}
-                />
-                <TabSection
-                  tabs={EXAM_PERIOD_TYPES}
-                  selectedIndex={selectedPeriod}
-                  onTabPress={setSelectedPeriod}
-                />
-              </>
-            )}
-          </View>
-
-          {/* 목표 입력 */}
-          <View style={styles.textFieldGroup}>
-            <Text style={styles.tabLabel}>목표</Text>
-            <View style={styles.inputField}>
-              <TextInput
-                style={styles.input}
-                placeholder="예) 평균 2등급 이상"
-                placeholderTextColor={Colors['Text.Normal.Assistive']}
-                value={goal}
-                onChangeText={setGoal}  // Unity의 onValueChanged와 동일
-                multiline={false}
-              />
-            </View>
-            <Text style={styles.helperText}>
-              현실적인 목표를 작성할수록 전략의 질이 높아져요!
-            </Text>
-          </View>
-
-        </View>
-      </ScrollView>
-
-      {/* 다음 버튼 - 하단 고정 */}
-      {/* Unity의 Canvas - Screen Space Overlay와 유사 */}
-      <View style={styles.buttonSection}>
-        <Button
-          label="다음"
-          state={isNextEnabled ? 'Default' : 'Inactive'}
-          onPress={handleNext}
-        />
+export default function AuthIntroScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const { resetDraft } = useAuthSignup();
+  const startEmail = () => { resetDraft('email'); router.push('/auth/signup/account' as Href); };
+  return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
+    <View style={styles.header}><Pressable accessibilityLabel="홈으로 이동" hitSlop={10} onPress={() => router.replace('/')} style={styles.closeButton}>
+      <Ionicons name="close" size={24} color="#242628" />
+    </Pressable></View>
+    <View style={styles.hero}>
+      <Image source={CHARACTER} resizeMode="contain" style={styles.character} />
+      <View style={styles.heroCopy}><Text style={styles.title}>안녕!</Text><Text style={styles.description}>시험 관리 AI 튜터{`\n`}지금 바로 시작해봐</Text></View>
+    </View>
+    <View style={[styles.actions, { paddingBottom: insets.bottom }]}>
+      <View style={styles.startSection}>
+        <AuthActionButton icon={KAKAO_ICON} label="카카오로 시작하기" variant="kakao" testID="auth-kakao" />
+        <AuthActionButton label="이메일로 시작하기" onPress={startEmail} variant="secondary" testID="auth-email" />
       </View>
-    </SafeAreaView>
-  );
+      <View style={styles.dividerSection}><View style={styles.divider} /><Text style={styles.dividerLabel}>이미 계정이 있다면</Text><View style={styles.divider} /></View>
+      <View style={styles.loginSection}>
+        <AuthActionButton label="로그인" onPress={() => router.push('/auth/login' as Href)} variant="outline" testID="auth-login" />
+        <Text style={styles.policyText}>가입하면 <Text style={styles.policyLink}>이용약관</Text>과 <Text style={styles.policyLink}>개인정보처리방침</Text>에{`\n`}동의하는 것으로 간주해요</Text>
+      </View>
+    </View>
+  </SafeAreaView>;
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  scroll: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 100,         // 버튼 영역 높이만큼 여백
-  },
-
-  // 뒤로가기
-  backButton: {
-    marginBottom: 16,
-  },
-  backArrow: {
-    fontSize: 24,
-    color: Colors['Text.Normal.Normal'],
-  },
-
-  // 제목
-  title: {
-    fontFamily: 'Pretendard',
-    fontSize: 24,
-    fontWeight: '700',
-    color: Colors['Text.Normal.Strong'],
-    marginBottom: 24,
-  },
-
-  // 폼 전체 컨테이너
-  form: {
-    gap: 24,                    // 탭 그룹 간 간격
-  },
-
-  // 탭 그룹 (라벨 + TabSection들)
-  tabGroup: {
-    gap: 8,
-  },
-
-  // 탭 라벨 ("시험 선택", "목표")
-  tabLabel: {
-    fontFamily: 'Pretendard',
-    fontSize: 14,
-    fontWeight: '500',
-    color: Colors['Text.Normal.Assistive'],
-    marginBottom: 4,
-  },
-
-  // 목표 입력 그룹
-  textFieldGroup: {
-    gap: 4,
-  },
-
-  // 입력창 외곽 박스
-  inputField: {
-    height: 54,
-    paddingHorizontal: 16,
-    justifyContent: 'center',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Strong'],
-    backgroundColor: Colors['Fill.Normal.Normal'],
-  },
-
-  // 실제 텍스트 입력 영역
-  input: {
-    fontFamily: 'Pretendard',
-    fontSize: 16,
-    fontWeight: '500',
-    color: Colors['Text.Normal.Normal'],
-    letterSpacing: -0.2,
-  },
-
-  // 헬퍼 텍스트
-  helperText: {
-    fontFamily: 'Pretendard',
-    fontSize: 12,
-    fontWeight: '400',
-    color: Colors['Text.Normal.Subtle'],
-    letterSpacing: -0.2,
-  },
-
-  // 하단 고정 버튼 영역
-  buttonSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 12,
-    backgroundColor: '#FFFFFF',
-  },
+  safeArea: { flex: 1, backgroundColor: '#FFFFFF' }, header: { height: 36, justifyContent: 'center', paddingHorizontal: 20 },
+  closeButton: { width: 40, height: 36, alignItems: 'flex-start', justifyContent: 'center' },
+  hero: { flex: 1, minHeight: 220, alignItems: 'center', justifyContent: 'center', gap: 12, paddingHorizontal: 40 },
+  character: { width: 123, height: 130 }, heroCopy: { width: '100%', alignItems: 'center', gap: 8 },
+  title: { color: '#242628', fontFamily: 'Pretendard-SemiBold', fontSize: 28, lineHeight: 40, textAlign: 'center' },
+  description: { color: '#242628', fontFamily: 'Pretendard-Medium', fontSize: 16, lineHeight: 24, textAlign: 'center' },
+  actions: { width: '100%', gap: 28, paddingHorizontal: 20 }, startSection: { gap: 8 },
+  dividerSection: { flexDirection: 'row', alignItems: 'center', gap: 12 }, divider: { flex: 1, height: 1, backgroundColor: Colors['Line.Normal.Strong'] },
+  dividerLabel: { color: Colors['Text.Normal.Normal'], fontFamily: 'Pretendard-Medium', fontSize: 14, lineHeight: 20 },
+  loginSection: { alignItems: 'center', gap: 8 }, policyText: { color: Colors['Text.Normal.Normal'], fontFamily: 'Pretendard-Medium', fontSize: 14, lineHeight: 20, textAlign: 'center' },
+  policyLink: { color: '#5299A4' },
 });
