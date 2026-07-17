@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { DifficultyScore } from '../figma';
 import { AssetIcon } from '../ui';
 import { Colors } from '../../constants/colors';
 import { Difficulty, HomeTask } from './types';
