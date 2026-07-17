@@ -1,5 +1,5 @@
-// app/tutor/step3.tsx
-// AI 튜터 생성 화면3 - 시험 과목 추가
+
+
 
 import { type Href, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
@@ -13,52 +13,23 @@ import {
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../components/Button';
-import { InfoCard } from '../../components/InfoCard';
-import { InputField } from '../../components/InputField';
-import { Modal } from '../../components/Modal';
-import { SwipeActions } from '../../components/SwipeActions';
+import {
+  BottomActionBar,
+  Button,
+  InfoCard,
+  InputField,
+  Modal,
+  SwipeActions,
+} from '../../components/ui';
+import { type TutorSubjectDraft, useTutorDraft } from '../../components/tutor/TutorDraftContext';
 import { Colors } from '../../constants/colors';
-
-type SubjectStatus = 'done' | 'anxious' | 'empty';
-
-type ExamSubject = {
-  id: string;
-  name: string;
-  detail: string;
-  status: SubjectStatus;
-  progress?: string;
-};
 
 const SUBJECT_OPTIONS = ['국어', '수학', '영어', '사회(탐구)', '과학(탐구)', '한국사'];
 const SWIPE_ACTION_WIDTH = 153;
 const SWIPE_ACTION_GAP = 16;
 const SWIPE_REVEAL_WIDTH = SWIPE_ACTION_WIDTH + SWIPE_ACTION_GAP;
 
-const INITIAL_SUBJECTS: ExamSubject[] = [
-  {
-    id: 'korean',
-    name: '국어',
-    detail: '문학 1단원, 독서 2단원 · 교과서 + 프린트',
-    status: 'done',
-    progress: '진도 40%',
-  },
-  {
-    id: 'math',
-    name: '수학',
-    detail: '수열, 극한 · 교과서 + 프린트',
-    status: 'anxious',
-    progress: '매우 불안',
-  },
-  {
-    id: 'english',
-    name: '영어',
-    detail: '탭해서 상세 입력하기',
-    status: 'empty',
-  },
-];
-
-function makeSubject(name: string): ExamSubject {
+function makeSubject(name: string): TutorSubjectDraft {
   return {
     id: `${name}-${Date.now()}`,
     name,
@@ -69,7 +40,8 @@ function makeSubject(name: string): ExamSubject {
 
 export default function Step3Screen() {
   const router = useRouter();
-  const [subjects, setSubjects] = useState<ExamSubject[]>(INITIAL_SUBJECTS);
+  const { draft, setSubjects } = useTutorDraft();
+  const subjects = draft.subjects;
   const [actionSubjectId, setActionSubjectId] = useState<string | null>(null);
   const [deleteSubjectId, setDeleteSubjectId] = useState<string | null>(null);
   const [showSubjectSheet, setShowSubjectSheet] = useState(false);
@@ -80,25 +52,25 @@ export default function Step3Screen() {
 
   const handleAddSubject = (name: string) => {
     if (usedNames.includes(name)) return;
-    setSubjects(prev => [...prev, makeSubject(name)]);
+    setSubjects([...subjects, makeSubject(name)]);
     setShowSubjectSheet(false);
   };
 
   const handleDirectSubmit = (name: string) => {
     if (!usedNames.includes(name)) {
-      setSubjects(prev => [...prev, makeSubject(name)]);
+      setSubjects([...subjects, makeSubject(name)]);
     }
     setShowDirectInput(false);
   };
 
   const handleDelete = () => {
     if (!deleteSubjectId) return;
-    setSubjects(prev => prev.filter(subject => subject.id !== deleteSubjectId));
+    setSubjects(subjects.filter(subject => subject.id !== deleteSubjectId));
     setDeleteSubjectId(null);
     setActionSubjectId(null);
   };
 
-  const openSubjectDetail = (subject: ExamSubject) => {
+  const openSubjectDetail = (subject: TutorSubjectDraft) => {
     router.push(({
       pathname: '/tutor/subject-detail',
       params: { subject: subject.name },
@@ -106,7 +78,7 @@ export default function Step3Screen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backArrow}>←</Text>
@@ -137,9 +109,13 @@ export default function Step3Screen() {
         </Pressable>
       </ScrollView>
 
-      <View style={styles.buttonSection}>
-        <Button label="다음" state="Default" onPress={() => {}} />
-      </View>
+      <BottomActionBar style={styles.buttonSection}>
+        <Button
+          label="다음"
+          state="Default"
+          onPress={() => router.push('/tutor/schedule' as Href)}
+        />
+      </BottomActionBar>
 
       <RNModal visible={showSubjectSheet} transparent animationType="slide">
         <Pressable style={styles.sheetBackdrop} onPress={() => setShowSubjectSheet(false)}>
@@ -262,10 +238,7 @@ const styles = StyleSheet.create({
     color: Colors['Text.Normal.Strong'],
   },
   buttonSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 12,
-    backgroundColor: '#FFFFFF',
+    flexShrink: 0,
   },
   sheetBackdrop: {
     flex: 1,
@@ -335,7 +308,7 @@ function SubjectSwipeRow({
   onEditPress,
   onDeletePress,
 }: {
-  subject: ExamSubject;
+  subject: TutorSubjectDraft;
   isOpen: boolean;
   onOpen: () => void;
   onClose: () => void;

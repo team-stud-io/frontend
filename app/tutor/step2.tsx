@@ -1,5 +1,5 @@
-// app/tutor/step2.tsx
-// AI 튜터 생성 화면2 - 시험 날짜 설정
+
+
 
 import { type Href, useRouter } from 'expo-router';
 import React, { useState } from 'react';
@@ -12,8 +12,8 @@ import {
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../components/Button';
-import { InputField } from '../../components/InputField';
+import { BottomActionBar, Button, InputField } from '../../components/ui';
+import { useTutorDraft } from '../../components/tutor/TutorDraftContext';
 import { Colors } from '../../constants/colors';
 
 const SUBJECTS = [
@@ -52,6 +52,7 @@ type CustomSubjectMap = Record<string, string>;
 
 export default function Step2Screen() {
   const router = useRouter();
+  const { updateExamDates } = useTutorDraft();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -119,10 +120,21 @@ export default function Step2Screen() {
   };
 
   const hasAnySelection = Object.values(subjectMap).some(v => v.length > 0);
+  const handleNext = () => {
+    updateExamDates(
+      Object.fromEntries(
+        Object.entries(subjectMap).map(([date, subjects]) => [
+          date,
+          subjects.map(subjectId => customSubjects[subjectId] ?? SUBJECTS.find(subject => subject.id === subjectId)?.label ?? subjectId),
+        ])
+      )
+    );
+    router.push('/tutor/step3' as Href);
+  };
 
   return (
 
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backArrow}>←</Text>
@@ -131,9 +143,9 @@ export default function Step2Screen() {
         <Text style={styles.title}>시험 날짜 설정</Text>
         <Text style={styles.subtitle}>날짜를 탭해서 과목을 추가하세요</Text>
 
-        {/* 캘린더 박스 */}
+
         <View style={styles.calendarBox}>
-          {/* 연/월 헤더 */}
+
           <View style={styles.yearMonthRow}>
             <Pressable onPress={goToPrevMonth} style={styles.chevronBtn}>
               <Text style={styles.chevronText}>‹</Text>
@@ -144,14 +156,14 @@ export default function Step2Screen() {
             </Pressable>
           </View>
 
-          {/* 요일 헤더 */}
+
           <View style={styles.dayHeaderRow}>
             {DAY_LABELS.map(day => (
               <Text key={day} style={styles.dayHeaderText}>{day}</Text>
             ))}
           </View>
 
-          {/* 날짜 그리드 */}
+
           {Array.from({ length: 6 }, (_, weekIdx) => (
             <View key={weekIdx} style={styles.weekRow}>
               {days.slice(weekIdx * 7, weekIdx * 7 + 7).map((day, dayIdx) => {
@@ -196,7 +208,7 @@ export default function Step2Screen() {
           ))}
         </View>
 
-        {/* 과목 선택 섹션 */}
+
         {selectedDate && (
           <View style={styles.subjectSection}>
             <Text style={styles.selectedDateLabel}>
@@ -250,14 +262,14 @@ export default function Step2Screen() {
         )}
       </ScrollView>
 
-      {/* 하단 버튼 */}
-      <View style={styles.buttonSection}>
+
+      <BottomActionBar style={styles.buttonSection}>
         <Button
           label={hasAnySelection ? '다음' : '건너뛰기'}
           state="Default"
-          onPress={() => router.push('/tutor/step3' as Href)}
+          onPress={handleNext}
         />
-      </View>
+      </BottomActionBar>
       <Modal
         visible={showDirectInput}
         transparent
@@ -295,7 +307,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // 캘린더
   calendarBox: {
     borderRadius: 20,
     borderWidth: 1,
@@ -349,7 +360,6 @@ const styles = StyleSheet.create({
   dotsRow: { flexDirection: 'row', gap: 2, justifyContent: 'center' },
   dot: { width: 4, height: 4, borderRadius: 2 },
 
-  // 과목 선택
   subjectSection: { gap: 12 },
   selectedDateLabel: {
     fontFamily: 'Pretendard-SemiBold',
@@ -378,12 +388,8 @@ const styles = StyleSheet.create({
   },
   subjectTagTextSelected: { color: Colors['Text.Normal.Normal'] },
 
-  // 하단 버튼
   buttonSection: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    paddingTop: 12,
-    backgroundColor: '#FFFFFF',
+    flexShrink: 0,
   },
   directInputBackdrop: {
     flex: 1,
