@@ -3,6 +3,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { TutorDraftProvider } from '../components/tutor/TutorDraftContext';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -30,14 +31,23 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth/index" />
-        <Stack.Screen name="tutor/index" />
-        <Stack.Screen name="tutor/step2" />
-        <Stack.Screen name="tutor/step3" />
-        <Stack.Screen name="tutor/subject-detail" />
-      </Stack>
+      <TutorDraftProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
+          <Stack.Screen name="home/index" />
+          <Stack.Screen name="MyPage/index" />
+          <Stack.Screen name="auth" />
+          <Stack.Screen name="tutor/index" />
+          <Stack.Screen name="tutor/step2" />
+          <Stack.Screen name="tutor/step3" />
+          <Stack.Screen name="tutor/schedule" />
+          <Stack.Screen name="result/index" />
+          <Stack.Screen name="report/index" />
+          <Stack.Screen name="report/weakness" />
+          <Stack.Screen name="report/review" />
+          <Stack.Screen name="tutor/subject-detail" />
+        </Stack>
+      </TutorDraftProvider>
     </GestureHandlerRootView>
   );
 }

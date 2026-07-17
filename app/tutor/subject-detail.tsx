@@ -1,33 +1,39 @@
-// app/tutor/subject-detail.tsx
-// AI 튜터 생성 화면 - 과목 상세 정보 입력
 
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+
+
+import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useMemo, useState } from 'react';
 import {
-  LayoutChangeEvent,
-  Modal as RNModal,
-  PanResponder,
+  Alert,
   Pressable,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Button } from '../../components/Button';
-import { Modal } from '../../components/Modal';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import {
+  BottomActionBar,
+  BOTTOM_ACTION_CONTENT_HEIGHT,
+  Button,
+} from '../../components/ui';
+import {
+  ChipRow,
+  Field,
+  ReconnectModal,
+  Segmented,
+  SliderField,
+  UploadErrorModal,
+  UploadField,
+  type UploadErrorType,
+  type UploadItem,
+} from '../../components/tutor/subject-detail';
+import { subjectDetailStyles as styles } from '../../components/tutor/subject-detail/styles';
+import { useTutorDraft } from '../../components/tutor/TutorDraftContext';
 import { Colors } from '../../constants/colors';
+import { useSaveTutorSubject } from '../../hooks/useSaveTutorSubject';
 
 type DetailTab = 'range' | 'style' | 'materials';
-type UploadErrorType = 'format' | 'limit' | 'network';
-
-type UploadItem = {
-  id: string;
-  name: string;
-  kind: 'image' | 'file';
-};
-
 const TABS: { id: DetailTab; label: string }[] = [
   { id: 'range', label: '범위' },
   { id: 'style', label: '출제스타일' },
@@ -93,25 +99,29 @@ function getFirstParam(value: string | string[] | undefined, fallback: string) {
   return value ?? fallback;
 }
 
-function clampPercent(value: number) {
-  return Math.min(100, Math.max(0, Math.round(value)));
-}
-
 export default function SubjectDetailScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const params = useLocalSearchParams<{ subject?: string }>();
+  const { draft, upsertSubject } = useTutorDraft();
   const subjectName = getFirstParam(params.subject, '국어');
+  const savedSubject = draft.subjects.find(subject => subject.name === subjectName);
+  const subjectId = useMemo(
+    () => savedSubject?.id ?? `${subjectName}-${Date.now()}`,
+    [savedSubject?.id, subjectName]
+  );
+  const { isSaving, saveSubject } = useSaveTutorSubject();
   const isMath = isMathSubject(subjectName);
   const isEnglish = isEnglishSubject(subjectName);
   const isSocial = isSocialSubject(subjectName);
   const isScience = isScienceSubject(subjectName);
   const [activeTab, setActiveTab] = useState<DetailTab>('range');
-  const [examRange, setExamRange] = useState('');
+  const [examRange, setExamRange] = useState(savedSubject?.range ?? '');
   const [progress, setProgress] = useState(isMath || isEnglish ? 20 : 40);
   const [selectedGrade, setSelectedGrade] = useState(0);
   const [mockGrade, setMockGrade] = useState(isEnglish || isSocial ? 2 : 1);
   const [confidence, setConfidence] = useState(isMath ? 2 : isEnglish || isSocial || isScience ? 1 : 0);
-  const [weakPoint, setWeakPoint] = useState('');
+  const [weakPoint, setWeakPoint] = useState(savedSubject?.weakPoint ?? '');
   const [socialTypes, setSocialTypes] = useState<string[]>(['한국지리']);
   const [scienceTypes, setScienceTypes] = useState<string[]>(['물리학']);
   const [focusOptions, setFocusOptions] = useState<string[]>(
@@ -128,7 +138,7 @@ export default function SubjectDetailScreen() {
   const [essayRatio, setEssayRatio] = useState(isScience ? 30 : isSocial ? 20 : isMath || isEnglish ? 40 : 25);
   const [difficulty, setDifficulty] = useState(isScience ? 3 : 2);
   const [teacherMemo, setTeacherMemo] = useState('');
-  const [materialOptions, setMaterialOptions] = useState<string[]>(['교과서', '학교 프린트', '부교재']);
+  const [materialOptions, setMaterialOptions] = useState<string[]>(savedSubject?.materials ?? ['교과서', '학교 프린트', '부교재']);
   const [publisher, setPublisher] = useState('');
   const [workbook, setWorkbook] = useState('');
   const [printCount, setPrintCount] = useState('');
@@ -136,18 +146,58 @@ export default function SubjectDetailScreen() {
   const [examUploads, setExamUploads] = useState<UploadItem[]>([]);
   const [uploadError, setUploadError] = useState<UploadErrorType | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
-
   const nextLabel = activeTab === 'materials' ? '완료' : '다음';
   const isNextEnabled = useMemo(() => {
     if (activeTab === 'range') return examRange.trim().length > 0;
     return true;
   }, [activeTab, examRange]);
 
-  const goNext = () => {
-    if (!isNextEnabled) return;
+  const goNext = async () => {
+    if (!isNextEnabled || isSaving) return;
     if (activeTab === 'range') setActiveTab('style');
     else if (activeTab === 'style') setActiveTab('materials');
-    else router.back();
+    else {
+      try {
+        const response = await saveSubject({
+          subjectId,
+          subjectName,
+          examRange: examRange.trim(),
+          progress,
+          selectedGradeIndex: selectedGrade,
+          mockGradeIndex: mockGrade,
+          confidenceIndex: confidence,
+          weakPoint: weakPoint.trim(),
+          socialTypes,
+          scienceTypes,
+          focusOptions,
+          outsideOption,
+          similarityOption,
+          priorityIndex: priority,
+          memoryRatio,
+          socialMemory,
+          socialChart,
+          calculationRatio,
+          scienceConcept,
+          essayRatio,
+          difficultyIndex: difficulty,
+          teacherMemo: teacherMemo.trim(),
+          materials: materialOptions,
+          publisher: publisher.trim(),
+          workbook: workbook.trim(),
+          printCount: printCount.trim(),
+          printAttachments: printUploads,
+          examAttachments: examUploads,
+          scheduleSlots: savedSubject?.scheduleSlots,
+        });
+        upsertSubject(response.subject);
+        router.push('/tutor/step3' as Href);
+      } catch (error) {
+        Alert.alert(
+          '저장 실패',
+          error instanceof Error ? error.message : '잠시 후 다시 시도해 주세요.'
+        );
+      }
+    }
   };
 
   const goPrev = () => {
@@ -237,7 +287,7 @@ export default function SubjectDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backArrow}>←</Text>
@@ -279,7 +329,13 @@ export default function SubjectDetailScreen() {
         })}
       </View>
 
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: BOTTOM_ACTION_CONTENT_HEIGHT + insets.bottom + 24 },
+        ]}
+      >
         {activeTab === 'range' && (
           <>
             {isSocial && (
@@ -498,19 +554,20 @@ export default function SubjectDetailScreen() {
             </Field>
           </>
         )}
+
       </ScrollView>
 
-      <View style={styles.buttonRow}>
+      <BottomActionBar style={styles.buttonRow}>
         {activeTab !== 'range' && (
           <Button label="이전" state="Default" onPress={goPrev} style={styles.prevButton} />
         )}
         <Button
-          label={nextLabel}
-          state={isNextEnabled ? 'Default' : 'Inactive'}
+          label={isSaving ? '저장 중...' : nextLabel}
+          state={isNextEnabled && !isSaving ? 'Default' : 'Inactive'}
           onPress={goNext}
           style={styles.nextButton}
         />
-      </View>
+      </BottomActionBar>
 
       <UploadErrorModal
         error={uploadError}
@@ -525,632 +582,3 @@ export default function SubjectDetailScreen() {
     </SafeAreaView>
   );
 }
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <View style={styles.field}>
-      <Text style={styles.label}>{label}</Text>
-      {children}
-    </View>
-  );
-}
-
-function ChipRow({
-  options,
-  selectedValues,
-  onPress,
-}: {
-  options: string[];
-  selectedValues: string[];
-  onPress: (option: string) => void;
-}) {
-  return (
-    <View style={styles.chipRow}>
-      {options.map(option => {
-        const isSelected = selectedValues.includes(option);
-        return (
-          <Pressable
-            key={option}
-            style={[styles.chip, isSelected && styles.chipSelected]}
-            onPress={() => onPress(option)}
-          >
-            <Text style={[styles.chipText, isSelected && styles.chipTextSelected]}>{option}</Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function Segmented({
-  options,
-  selectedIndex,
-  onSelect,
-}: {
-  options: string[];
-  selectedIndex: number;
-  onSelect: (index: number) => void;
-}) {
-  return (
-    <View style={styles.segmented}>
-      {options.map((option, index) => {
-        const isSelected = selectedIndex === index;
-        return (
-          <Pressable
-            key={option}
-            style={[styles.segmentItem, isSelected && styles.segmentItemSelected]}
-            onPress={() => onSelect(index)}
-          >
-            <Text style={[styles.segmentText, isSelected && styles.segmentTextSelected]}>
-              {option}
-            </Text>
-          </Pressable>
-        );
-      })}
-    </View>
-  );
-}
-
-function SliderField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: number;
-  onChange: (value: number) => void;
-}) {
-  const [trackWidth, setTrackWidth] = useState(0);
-  const trackPageX = useRef(0);
-  const didDrag = useRef(false);
-
-  const updateValue = useCallback(
-    (nextValue: number) => onChange(clampPercent(nextValue)),
-    [onChange]
-  );
-
-  const getValueFromPageX = useCallback(
-    (pageX: number) => {
-      if (trackWidth === 0) return value;
-      return ((pageX - trackPageX.current) / trackWidth) * 100;
-    },
-    [trackWidth, value]
-  );
-
-  const handleTrackLayout = (event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
-  };
-
-  const panResponder = useMemo(
-    () =>
-      PanResponder.create({
-        onStartShouldSetPanResponder: () => true,
-        onMoveShouldSetPanResponder: () => true,
-        onPanResponderGrant: event => {
-          didDrag.current = false;
-          trackPageX.current = event.nativeEvent.pageX - event.nativeEvent.locationX;
-          updateValue(getValueFromPageX(event.nativeEvent.pageX));
-        },
-        onPanResponderMove: (_, gestureState) => {
-          if (trackWidth === 0) return;
-          if (Math.abs(gestureState.dx) > 1) didDrag.current = true;
-          updateValue(getValueFromPageX(gestureState.moveX));
-        },
-        onPanResponderRelease: (_, gestureState) => {
-          if (trackWidth === 0 || didDrag.current) return;
-          updateValue(getValueFromPageX(gestureState.moveX));
-        },
-        onPanResponderTerminate: () => {
-          didDrag.current = false;
-        },
-      }),
-    [getValueFromPageX, trackWidth, updateValue]
-  );
-
-  return (
-    <Field label={label}>
-      <View style={styles.sliderValueRow}>
-        <View
-          style={styles.sliderTouchArea}
-          onLayout={handleTrackLayout}
-          {...panResponder.panHandlers}
-        >
-          <View style={styles.sliderTrack}>
-            <View style={[styles.sliderFill, { width: `${value}%` }]} />
-            <View
-              style={[styles.sliderThumb, { left: `${value}%` }]}
-            />
-          </View>
-        </View>
-        <Text style={styles.sliderValue}>{value}%</Text>
-      </View>
-    </Field>
-  );
-}
-
-function UploadField({
-  uploads,
-  onAdd,
-  onRemove,
-  onFormatError,
-  onNetworkError,
-}: {
-  uploads: UploadItem[];
-  onAdd: () => void;
-  onRemove: (id: string) => void;
-  onFormatError: () => void;
-  onNetworkError: () => void;
-}) {
-  return (
-    <View style={styles.uploadArea}>
-      {uploads.length > 0 && (
-        <View style={styles.uploadList}>
-          {uploads.map(item => (
-            <Pressable
-              key={item.id}
-              style={item.kind === 'image' ? styles.uploadPreview : styles.uploadFile}
-              onPress={onFormatError}
-            >
-              <Text style={item.kind === 'image' ? styles.uploadPreviewText : styles.uploadFileText} numberOfLines={1}>
-                {item.kind === 'image' ? '사진' : `📎 ${item.name}`}
-              </Text>
-              <Pressable style={styles.uploadRemove} onPress={() => onRemove(item.id)}>
-                <Text style={styles.uploadRemoveText}>×</Text>
-              </Pressable>
-            </Pressable>
-          ))}
-        </View>
-      )}
-      <Pressable style={styles.uploadButton} onPress={onAdd} onLongPress={onNetworkError}>
-        <Text style={styles.uploadIcon}>＋</Text>
-        <Text style={styles.uploadText}>사진 등록</Text>
-      </Pressable>
-    </View>
-  );
-}
-
-function UploadErrorModal({
-  error,
-  onCancel,
-  onRetry,
-}: {
-  error: UploadErrorType | null;
-  onCancel: () => void;
-  onRetry: () => void;
-}) {
-  if (!error) return null;
-
-  const title =
-    error === 'format'
-      ? '사진을 업로드할 수 없어요'
-      : error === 'limit'
-        ? '업로드 개수를 초과했어요'
-        : '네트워크 연결이 불안정합니다';
-  const message =
-    error === 'format'
-      ? '10MB 이하의 JPG, PNG,\nPDF 파일만 업로드할 수 있습니다.'
-      : error === 'limit'
-        ? '사진은 최대 3장까지만\n업로드할 수 있습니다.'
-        : '인터넷 연결 상태를 확인하고\n다시 시도해 주세요.';
-
-  return (
-    <Modal
-      visible
-      title={title}
-      description={message}
-      leftButton="취소"
-      rightButton="다시 시도하기"
-      onLeftPress={onCancel}
-      onRightPress={onRetry}
-    />
-  );
-}
-
-function ReconnectModal({ visible, onClose }: { visible: boolean; onClose: () => void }) {
-  return (
-    <RNModal visible={visible} animationType="fade">
-      <SafeAreaView style={styles.reconnectScreen}>
-        <View style={styles.reconnectBody}>
-          <Pressable style={styles.reconnectMascot} onPress={onClose}>
-            <View style={styles.reconnectEyeRow}>
-              <View style={styles.reconnectEye} />
-              <View style={styles.reconnectEye} />
-            </View>
-            <View style={styles.reconnectSmile} />
-          </Pressable>
-          <Text style={styles.reconnectTitle}>연결중...</Text>
-          <Text style={styles.reconnectText}>네트워크를 다시 연결하고 있어요</Text>
-          <View style={styles.reconnectSpinner} />
-        </View>
-      </SafeAreaView>
-    </RNModal>
-  );
-}
-
-const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: '#FFFFFF' },
-  header: {
-    height: 88,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 28,
-    color: Colors['Text.Normal.Strong'],
-  },
-  subjectBadge: {
-    minWidth: 66,
-    height: 34,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E5D5DF',
-    backgroundColor: '#FFF7FB',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 14,
-  },
-  subjectBadgeText: {
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 16,
-    color: '#F04588',
-  },
-  subjectBadgeMath: {
-    borderColor: '#D6E8C8',
-    backgroundColor: '#FAFFF5',
-  },
-  subjectBadgeTextMath: {
-    color: '#48AD00',
-  },
-  subjectBadgeEnglish: {
-    borderColor: '#D5E2FF',
-    backgroundColor: '#F5F8FF',
-  },
-  subjectBadgeTextEnglish: {
-    color: '#3385FF',
-  },
-  subjectBadgeSocial: {
-    borderColor: '#F0D9B7',
-    backgroundColor: '#FFF8EF',
-  },
-  subjectBadgeTextSocial: {
-    color: '#F68D00',
-  },
-  subjectBadgeScience: {
-    borderColor: '#BCEAF2',
-    backgroundColor: '#F0FCFE',
-  },
-  subjectBadgeTextScience: {
-    color: '#00BDDE',
-  },
-  headerSpacer: { width: 40 },
-  tabBar: {
-    height: 58,
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    borderBottomColor: Colors['Line.Normal.Normal'],
-  },
-  tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
-  },
-  tabItemActive: {
-    borderBottomColor: Colors['Fill.Primary.Normal'],
-  },
-  tabText: {
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 16,
-    color: Colors['Text.Normal.Assistive'],
-  },
-  tabTextActive: {
-    color: '#4C8790',
-  },
-  scroll: { flex: 1 },
-  content: {
-    paddingHorizontal: 20,
-    paddingTop: 34,
-    paddingBottom: 120,
-    gap: 30,
-  },
-  field: {
-    gap: 12,
-  },
-  label: {
-    fontFamily: 'Pretendard-Medium',
-    fontSize: 16,
-    color: Colors['Text.Normal.Normal'],
-  },
-  input: {
-    height: 64,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Strong'],
-    paddingHorizontal: 18,
-    fontFamily: 'Pretendard-Medium',
-    fontSize: 16,
-    color: Colors['Text.Normal.Strong'],
-  },
-  sliderValueRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 16,
-  },
-  sliderTouchArea: {
-    flex: 1,
-    height: 44,
-    justifyContent: 'center',
-  },
-  sliderTrack: {
-    width: '100%',
-    height: 7,
-    borderRadius: 999,
-    backgroundColor: Colors['Line.Normal.Normal'],
-  },
-  sliderFill: {
-    height: 7,
-    borderRadius: 999,
-    backgroundColor: Colors['Fill.Primary.Normal'],
-  },
-  sliderThumb: {
-    position: 'absolute',
-    top: -10,
-    width: 30,
-    height: 30,
-    marginLeft: -15,
-    borderRadius: 15,
-    borderWidth: 3,
-    borderColor: Colors['Line.Normal.Normal'],
-    backgroundColor: '#6E9CA4',
-  },
-  sliderValue: {
-    width: 46,
-    textAlign: 'right',
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 16,
-    color: '#5F939B',
-  },
-  segmented: {
-    height: 64,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Strong'],
-    padding: 8,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  segmentItem: {
-    flex: 1,
-    height: 46,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  segmentItemSelected: {
-    borderWidth: 1,
-    borderColor: Colors['Line.Primary.Normal'],
-    backgroundColor: Colors['Fill.Primary.Assistive'],
-  },
-  segmentText: {
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 18,
-    color: Colors['Text.Normal.Assistive'],
-  },
-  segmentTextSelected: {
-    color: Colors['Text.Normal.Normal'],
-  },
-  chipRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  chip: {
-    minHeight: 46,
-    paddingHorizontal: 18,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Strong'],
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  chipSelected: {
-    borderColor: Colors['Line.Primary.Normal'],
-    backgroundColor: Colors['Fill.Primary.Assistive'],
-  },
-  chipText: {
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 16,
-    color: Colors['Text.Normal.Assistive'],
-  },
-  chipTextSelected: {
-    color: Colors['Text.Normal.Normal'],
-  },
-  noticeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
-  },
-  noticeIcon: {
-    fontSize: 28,
-  },
-  noticeText: {
-    flex: 1,
-    fontFamily: 'Pretendard-Bold',
-    fontSize: 16,
-    color: Colors['Text.Normal.Strong'],
-  },
-  helperText: {
-    fontFamily: 'Pretendard-Regular',
-    fontSize: 13,
-    color: Colors['Text.Normal.Assistive'],
-  },
-  uploadArea: {
-    gap: 10,
-  },
-  uploadList: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  uploadPreview: {
-    width: 82,
-    height: 56,
-    borderRadius: 6,
-    backgroundColor: '#EEF7F9',
-    borderWidth: 1,
-    borderColor: '#D8EEF2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  uploadPreviewText: {
-    fontFamily: 'Pretendard-Medium',
-    fontSize: 12,
-    color: Colors['Text.Normal.Assistive'],
-  },
-  uploadFile: {
-    maxWidth: '100%',
-    minHeight: 40,
-    borderRadius: 999,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Normal'],
-    paddingLeft: 16,
-    paddingRight: 36,
-    justifyContent: 'center',
-  },
-  uploadFileText: {
-    fontFamily: 'Pretendard-Regular',
-    fontSize: 13,
-    color: Colors['Text.Normal.Normal'],
-  },
-  uploadRemove: {
-    position: 'absolute',
-    right: -6,
-    top: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Normal'],
-  },
-  uploadRemoveText: {
-    fontFamily: 'Pretendard-Bold',
-    fontSize: 16,
-    lineHeight: 18,
-    color: Colors['Text.Normal.Normal'],
-  },
-  uploadButton: {
-    height: 64,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: Colors['Line.Normal.Strong'],
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  uploadIcon: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: Colors['Text.Normal.Normal'],
-    color: '#FFFFFF',
-    textAlign: 'center',
-    lineHeight: 22,
-    fontFamily: 'Pretendard-Bold',
-    fontSize: 15,
-  },
-  uploadText: {
-    fontFamily: 'Pretendard-SemiBold',
-    fontSize: 18,
-    color: Colors['Text.Normal.Normal'],
-  },
-  reconnectScreen: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-  },
-  reconnectBody: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingBottom: 60,
-  },
-  reconnectMascot: {
-    width: 112,
-    height: 94,
-    borderRadius: 30,
-    backgroundColor: '#C9F6FA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 28,
-  },
-  reconnectEyeRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  reconnectEye: {
-    width: 18,
-    height: 28,
-    borderRadius: 10,
-    backgroundColor: '#111111',
-  },
-  reconnectSmile: {
-    width: 34,
-    height: 20,
-    borderBottomWidth: 3,
-    borderColor: '#111111',
-    borderRadius: 20,
-  },
-  reconnectTitle: {
-    fontFamily: 'Pretendard-Bold',
-    fontSize: 28,
-    color: Colors['Text.Normal.Strong'],
-    marginBottom: 18,
-  },
-  reconnectText: {
-    fontFamily: 'Pretendard-Medium',
-    fontSize: 16,
-    color: Colors['Text.Normal.Strong'],
-    marginBottom: 28,
-  },
-  reconnectSpinner: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 3,
-    borderColor: '#D8EEF2',
-    borderTopColor: Colors['Fill.Primary.Normal'],
-  },
-  buttonRow: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    flexDirection: 'row',
-    gap: 14,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 20,
-    backgroundColor: '#FFFFFF',
-  },
-  prevButton: {
-    flex: 1,
-    backgroundColor: Colors['Fill.Normal.Assistive'],
-  },
-  nextButton: {
-    flex: 2,
-  },
-});
