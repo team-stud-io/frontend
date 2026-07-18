@@ -1,6 +1,7 @@
 
 
 
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { type Href, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
@@ -24,15 +25,28 @@ import {
 import { type TutorSubjectDraft, useTutorDraft } from '../../components/tutor/TutorDraftContext';
 import { Colors } from '../../constants/colors';
 
-const SUBJECT_OPTIONS = ['국어', '수학', '영어', '사회(탐구)', '과학(탐구)', '한국사'];
+const SUBJECT_OPTIONS = [
+  { label: '국어', category: '국어' },
+  { label: '수학', category: '수학' },
+  { label: '영어', category: '영어' },
+  { label: '사회(탐구)', category: '사회탐구', requiresCustomName: true },
+  { label: '과학(탐구)', category: '과학탐구', requiresCustomName: true },
+  { label: '한국사', category: '한국사' },
+];
 const SWIPE_ACTION_WIDTH = 153;
 const SWIPE_ACTION_GAP = 16;
 const SWIPE_REVEAL_WIDTH = SWIPE_ACTION_WIDTH + SWIPE_ACTION_GAP;
 
-function makeSubject(name: string): TutorSubjectDraft {
+function makeSubject(
+  name: string,
+  subjectCategory = name,
+  customSubjectName: string | null = null,
+): TutorSubjectDraft {
   return {
     id: `${name}-${Date.now()}`,
     name,
+    subjectCategory,
+    customSubjectName,
     detail: '탭해서 상세 입력하기',
     status: 'empty',
   };
@@ -46,20 +60,34 @@ export default function Step3Screen() {
   const [deleteSubjectId, setDeleteSubjectId] = useState<string | null>(null);
   const [showSubjectSheet, setShowSubjectSheet] = useState(false);
   const [showDirectInput, setShowDirectInput] = useState(false);
+  const [pendingSubjectCategory, setPendingSubjectCategory] = useState<string | null>(null);
 
-  const usedNames = subjects.map(subject => subject.name);
+  const usedSubjectKeys = new Set(
+    subjects.map(subject => `${subject.subjectCategory ?? subject.name}:${subject.customSubjectName ?? ''}`)
+  );
   const deleteSubject = subjects.find(subject => subject.id === deleteSubjectId);
 
-  const handleAddSubject = (name: string) => {
-    if (usedNames.includes(name)) return;
-    setSubjects([...subjects, makeSubject(name)]);
+  const handleAddSubject = (option: (typeof SUBJECT_OPTIONS)[number]) => {
+    if (option.requiresCustomName) {
+      setPendingSubjectCategory(option.category);
+      setShowSubjectSheet(false);
+      setShowDirectInput(true);
+      return;
+    }
+
+    const key = `${option.category}:`;
+    if (usedSubjectKeys.has(key)) return;
+    setSubjects([...subjects, makeSubject(option.label, option.category)]);
     setShowSubjectSheet(false);
   };
 
   const handleDirectSubmit = (name: string) => {
-    if (!usedNames.includes(name)) {
-      setSubjects([...subjects, makeSubject(name)]);
+    const subjectCategory = pendingSubjectCategory ?? '직접입력';
+    const key = `${subjectCategory}:${name}`;
+    if (!usedSubjectKeys.has(key)) {
+      setSubjects([...subjects, makeSubject(name, subjectCategory, name)]);
     }
+    setPendingSubjectCategory(null);
     setShowDirectInput(false);
   };
 
@@ -73,15 +101,15 @@ export default function Step3Screen() {
   const openSubjectDetail = (subject: TutorSubjectDraft) => {
     router.push(({
       pathname: '/tutor/subject-detail',
-      params: { subject: subject.name },
+      params: { subject: subject.name, subjectId: subject.id },
     } as unknown) as Href);
   };
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>←</Text>
+        <Pressable accessibilityLabel="뒤로가기" hitSlop={10} style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors['Text.Normal.Strong']} />
         </Pressable>
 
         <Text style={styles.title}>시험 과목 추가</Text>
@@ -123,16 +151,16 @@ export default function Step3Screen() {
             <Text style={styles.sheetTitle}>과목 선택</Text>
             <View style={styles.optionGrid}>
               {SUBJECT_OPTIONS.map(option => {
-                const isUsed = usedNames.includes(option);
+                const isUsed = !option.requiresCustomName && usedSubjectKeys.has(`${option.category}:`);
                 return (
                   <Pressable
-                    key={option}
+                    key={option.category}
                     disabled={isUsed}
                     style={[styles.optionChip, isUsed && styles.optionChipDisabled]}
                     onPress={() => handleAddSubject(option)}
                   >
                     <Text style={[styles.optionChipText, isUsed && styles.optionChipTextDisabled]}>
-                      {option}
+                      {option.label}
                     </Text>
                   </Pressable>
                 );
@@ -140,6 +168,7 @@ export default function Step3Screen() {
               <Pressable
                 style={[styles.optionChip, styles.optionChipSelected]}
                 onPress={() => {
+                  setPendingSubjectCategory(null);
                   setShowSubjectSheet(false);
                   setShowDirectInput(true);
                 }}
@@ -155,7 +184,15 @@ export default function Step3Screen() {
         <View style={styles.directInputBackdrop}>
           <InputField
             onSubmit={handleDirectSubmit}
-            onCancel={() => setShowDirectInput(false)}
+            onCancel={() => {
+              setPendingSubjectCategory(null);
+              setShowDirectInput(false);
+            }}
+            placeholder={pendingSubjectCategory === '사회탐구'
+              ? '사회탐구 과목명을 입력하세요'
+              : pendingSubjectCategory === '과학탐구'
+                ? '과학탐구 과목명을 입력하세요'
+                : '과목명을 입력하세요'}
           />
         </View>
       </RNModal>
@@ -184,7 +221,6 @@ const styles = StyleSheet.create({
     paddingBottom: 120,
   },
   backButton: { marginBottom: 28 },
-  backArrow: { fontSize: 24, color: Colors['Text.Normal.Normal'] },
   title: {
     fontFamily: 'Pretendard-Bold',
     fontSize: 24,

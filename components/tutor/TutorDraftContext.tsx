@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
+import type { TutorContentStyleInput, TutorImageUpload, TutorMaterialsInput } from '../../types/tutorResult';
 
 export type SubjectStatus = 'done' | 'anxious' | 'empty';
 
@@ -12,8 +13,16 @@ export type TutorSubjectDraft = {
   status: SubjectStatus;
   progress?: string;
   range?: string;
+  detailSubject?: string;
+  targetGrade?: string;
+  prevGrade?: string;
+  confidenceLevel?: string;
   weakPoint?: string;
   materials?: string[];
+  materialDetails?: TutorMaterialsInput;
+  printImages?: TutorImageUpload[];
+  pastExamImages?: TutorImageUpload[];
+  contentStyle?: TutorContentStyleInput;
   scheduleSlots?: string[];
 };
 
@@ -85,9 +94,9 @@ export function TutorDraftProvider({ children }: { children: React.ReactNode }) 
       },
       upsertSubject: subject => {
         setDraft(prev => {
-          const exists = prev.subjects.some(item => item.id === subject.id || item.name === subject.name);
+          const exists = prev.subjects.some(item => item.id === subject.id);
           const subjects = exists
-            ? prev.subjects.map(item => (item.id === subject.id || item.name === subject.name ? subject : item))
+            ? prev.subjects.map(item => (item.id === subject.id ? subject : item))
             : [...prev.subjects, subject];
           return { ...prev, subjects };
         });

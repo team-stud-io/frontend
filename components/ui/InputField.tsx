@@ -19,9 +19,15 @@ interface InputFieldProps {
   onSubmit: (subjectName: string) => void;
   onCancel: () => void;
   maxLength?: number;
+  placeholder?: string;
 }
 
-export function InputField({ onSubmit, onCancel, maxLength = 10 }: InputFieldProps) {
+export function InputField({
+  onSubmit,
+  onCancel,
+  maxLength = 10,
+  placeholder = '과목명을 입력하세요',
+}: InputFieldProps) {
   const inputRef = useRef<TextInput>(null);
   const [text, setText] = useState('');
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -51,7 +57,7 @@ export function InputField({ onSubmit, onCancel, maxLength = 10 }: InputFieldPro
           <TextInput
             ref={inputRef}
             style={styles.input}
-            placeholder="과목명과목명"
+            placeholder={placeholder}
             placeholderTextColor={Colors['Text.Normal.Assistive']}
             value={text}
             onChangeText={setText}

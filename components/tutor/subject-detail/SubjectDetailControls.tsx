@@ -17,6 +17,8 @@ export type UploadItem = {
   id: string;
   name: string;
   kind: 'image' | 'file';
+  uri?: string;
+  mimeType?: 'image/jpeg' | 'image/png';
 };
 
 function clampPercent(value: number) {

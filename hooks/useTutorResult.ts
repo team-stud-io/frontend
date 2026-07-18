@@ -35,7 +35,7 @@ export function useTutorResult(request: GenerateTutorResultRequest) {
         }
         setState({
           status: 'success',
-          data: adaptTutorResult(request, response),
+          data: adaptTutorResult(response.sourceRequest ?? request, response),
           error: null,
         });
       })

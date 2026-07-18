@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { type Href, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -13,8 +14,6 @@ import { Colors } from '../../constants/colors';
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 const HOURS = Array.from({ length: 24 }, (_, index) => index + 7);
-const DEFAULT_SLOTS = HOURS.filter(hour => hour >= 11).map(hour => `토-${hour}`);
-
 function formatHour(hour: number) {
   return `${String(hour % 24).padStart(2, '0')}:00`;
 }
@@ -26,9 +25,9 @@ export default function TutorScheduleScreen() {
   const [selectedSubjectId, setSelectedSubjectId] = useState(draft.subjects[0]?.id ?? '');
   const [scheduleBySubject, setScheduleBySubject] = useState<Record<string, string[]>>(() =>
     Object.fromEntries(
-      draft.subjects.map((subject, index) => [
+      draft.subjects.map(subject => [
         subject.id,
-        subject.scheduleSlots ?? (index === 0 ? DEFAULT_SLOTS : []),
+        subject.scheduleSlots ?? [],
       ])
     )
   );
@@ -64,8 +63,8 @@ export default function TutorScheduleScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>←</Text>
+        <Pressable accessibilityLabel="뒤로가기" hitSlop={10} style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors['Text.Normal.Strong']} />
         </Pressable>
       </View>
 
@@ -155,10 +154,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     justifyContent: 'center',
-  },
-  backArrow: {
-    fontSize: 24,
-    color: Colors['Text.Normal.Strong'],
   },
   subjectTabsScroll: {
     flexGrow: 0,

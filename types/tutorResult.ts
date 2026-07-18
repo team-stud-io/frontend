@@ -1,5 +1,34 @@
 export type TutorResultPriority = 'urgent' | 'caution' | 'good';
 
+export interface TutorContentStyleInput {
+  examFocus: string[];
+  essayRatioPercent: number;
+  difficultyLevel: string;
+  teacherMemo?: string;
+  mockExamSimilarity?: string;
+  priorityMaterial?: string;
+  textbookMemorizationImportance?: number;
+  supplementaryVariation?: string;
+  externalPassageFrequency?: string;
+  memorizationVsApplication?: string;
+  graphProblemFrequency?: string;
+  calculationProblemRatio?: string;
+  conceptVsPrinciple?: string;
+}
+
+export interface TutorMaterialsInput {
+  textbookPublisher?: string;
+  problemBookName?: string;
+  printPageCount?: string;
+}
+
+export interface TutorImageUpload {
+  id: string;
+  name: string;
+  uri: string;
+  mimeType: 'image/jpeg' | 'image/png';
+}
+
 export interface TutorResultSubjectInput {
   id: string;
   name: string;
@@ -7,8 +36,16 @@ export interface TutorResultSubjectInput {
   status: 'done' | 'anxious' | 'empty';
   progress?: string;
   range?: string;
+  detailSubject?: string;
+  targetGrade?: string;
+  prevGrade?: string;
+  confidenceLevel?: string;
   weakPoint?: string;
   materials?: string[];
+  materialDetails?: TutorMaterialsInput;
+  printImages?: TutorImageUpload[];
+  pastExamImages?: TutorImageUpload[];
+  contentStyle?: TutorContentStyleInput;
   scheduleSlots?: string[];
 }
 
@@ -54,6 +91,8 @@ export interface TutorResultStrategyResponse {
   subjectId: string;
   targetGradeLabel: string;
   feedback: { label: string; body: string }[];
+  weeklyInsights?: string[];
+  actionTitle?: string;
   errorProcess: { title: string; body: string }[];
   books: {
     rank: string;
@@ -83,6 +122,7 @@ export interface TutorResultResponse {
   exams: TutorResultExamResponse[];
   strategy: TutorResultStrategyResponse;
   strategies?: TutorResultStrategyResponse[];
+  sourceRequest?: GenerateTutorResultRequest;
 }
 
 export type ResultSubjectTone = 'red' | 'orange' | 'green';

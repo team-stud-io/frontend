@@ -4,6 +4,7 @@
 
 
 
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -62,8 +63,8 @@ export default function TutorCreateScreen() {
         keyboardShouldPersistTaps="handled"
       >
 
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>←</Text>
+        <Pressable accessibilityLabel="뒤로가기" hitSlop={10} style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors['Text.Normal.Strong']} />
         </Pressable>
 
 
@@ -151,27 +152,22 @@ const styles = StyleSheet.create({
   backButton: {
     marginBottom: 16,
   },
-  backArrow: {
-    fontSize: 24,
-    color: Colors['Text.Normal.Normal'],
-  },
-
-
   title: {
-    fontFamily: 'Pretendard-Bold',
-    fontSize: 24,
+    fontFamily: 'Pretendard-SemiBold',
+    fontSize: 22,
+    lineHeight: 30,
     color: Colors['Text.Normal.Strong'],
-    marginBottom: 24,
+    marginBottom: 28,
   },
 
 
   form: {
-    gap: 24,
+    gap: 36,
   },
 
 
   tabGroup: {
-    gap: 8,
+    gap: 12,
   },
 
 
@@ -179,12 +175,11 @@ const styles = StyleSheet.create({
     fontFamily: 'Pretendard-Medium',
     fontSize: 14,
     color: Colors['Text.Normal.Assistive'],
-    marginBottom: 4,
   },
 
 
   textFieldGroup: {
-    gap: 4,
+    gap: 8,
   },
 
 
@@ -192,7 +187,7 @@ const styles = StyleSheet.create({
     height: 54,
     paddingHorizontal: 16,
     justifyContent: 'center',
-    borderRadius: 16,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: Colors['Line.Normal.Strong'],
     backgroundColor: Colors['Fill.Normal.Normal'],

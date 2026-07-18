@@ -1,15 +1,15 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/colors';
+import { AssetIcon, type AssetIconName } from './AssetIcon';
 
 export type BottomNavigationSection = 'home' | 'aiReport' | 'studyRoom' | 'myPage';
 
-const ITEMS: { id: BottomNavigationSection; label: string; defaultIcon: keyof typeof Ionicons.glyphMap; selectedIcon: keyof typeof Ionicons.glyphMap }[] = [
-  { id: 'home', label: '홈', defaultIcon: 'library-outline', selectedIcon: 'library' },
-  { id: 'aiReport', label: 'AI 리포트', defaultIcon: 'sparkles-outline', selectedIcon: 'sparkles' },
-  { id: 'studyRoom', label: '스터디룸', defaultIcon: 'trophy-outline', selectedIcon: 'trophy' },
-  { id: 'myPage', label: '마이', defaultIcon: 'person-outline', selectedIcon: 'person' },
+const ITEMS: { id: BottomNavigationSection; label: string; defaultIcon: AssetIconName; selectedIcon: AssetIconName }[] = [
+  { id: 'home', label: '홈', defaultIcon: 'homeDefault', selectedIcon: 'homeSelected' },
+  { id: 'aiReport', label: 'AI 리포트', defaultIcon: 'aiReportDefault', selectedIcon: 'aiReportSelected' },
+  { id: 'studyRoom', label: '스터디룸', defaultIcon: 'studyRoomDefault', selectedIcon: 'studyRoomSelected' },
+  { id: 'myPage', label: '마이', defaultIcon: 'myPageDefault', selectedIcon: 'myPageSelected' },
 ];
 
 export function BottomNavigation({ activeSection, bottomInset, onHomePress, onAiReportPress, onMyPagePress }: { activeSection: BottomNavigationSection; bottomInset: number; onHomePress?: () => void; onAiReportPress?: () => void; onMyPagePress?: () => void }) {
@@ -17,7 +17,7 @@ export function BottomNavigation({ activeSection, bottomInset, onHomePress, onAi
     const selected = activeSection === item.id;
     const onPress = item.id === 'home' ? onHomePress : item.id === 'aiReport' ? onAiReportPress : item.id === 'myPage' ? onMyPagePress : undefined;
     return <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected }} onPress={onPress} style={styles.item}>
-      <Ionicons name={selected ? item.selectedIcon : item.defaultIcon} size={24} color={selected ? '#242628' : '#A1A3A5'} />
+      <AssetIcon name={selected ? item.selectedIcon : item.defaultIcon} width={24} height={24} />
       <Text style={[styles.label, selected && styles.labelSelected]}>{item.label}</Text>
     </Pressable>;
   })}</View>;
