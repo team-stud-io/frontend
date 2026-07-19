@@ -29,6 +29,10 @@ const SUBJECTS = [
 const MAX_SUBJECTS = 4;
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
+function toIsoDate(year: number, month: number, day: number) {
+  return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
 function getDaysInMonth(year: number, month: number) {
   const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -64,7 +68,7 @@ export default function Step2Screen() {
   const [pendingSubjectCategory, setPendingSubjectCategory] = useState<string | null>(null);
 
   const days = getDaysInMonth(year, month);
-  const selectedKey = selectedDate ? `${year}-${month + 1}-${selectedDate}` : null;
+  const selectedKey = selectedDate ? toIsoDate(year, month, selectedDate) : null;
   const selectedSubjects = selectedKey ? (subjectMap[selectedKey] ?? []) : [];
   const selectedDayLabel = selectedDate
     ? DAY_LABELS[new Date(year, month, selectedDate).getDay()]
@@ -105,7 +109,7 @@ export default function Step2Screen() {
   };
 
   const getDotsForDate = (date: number) => {
-    const key = `${year}-${month + 1}-${date}`;
+    const key = toIsoDate(year, month, date);
     return (subjectMap[key] ?? []).slice(0, 4).map(id => {
       const category = customSubjects[id]?.category;
       return SUBJECTS.find(subject => subject.category === category)?.color

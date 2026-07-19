@@ -71,7 +71,14 @@ const FAILED_STATUSES = new Set(['FAILED', 'FAILURE', 'ERROR', '실패']);
 const MAX_POLLING_MS = 90_000;
 
 function dateForSubject(examDates: Record<string, string[]>, name: string) {
-  return Object.entries(examDates).find(([, subjects]) => subjects.includes(name))?.[0] ?? null;
+  const date = Object.entries(examDates).find(([, subjects]) => subjects.includes(name))?.[0];
+  if (!date) return null;
+
+  const match = date.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if (!match) return date;
+
+  const [, year, month, day] = match;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
 }
 
 function toScheduleBlocks(slots: string[]) {

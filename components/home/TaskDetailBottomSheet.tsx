@@ -16,12 +16,12 @@ const STRATEGIES = [
 
 export function TaskDetailBottomSheet({ difficulty, visible, detail, onClose }: TaskDetailBottomSheetProps) {
   const { bottom } = useSafeAreaInsets();
-  const strategies = detail?.study_tips.map(tip => [tip.title, tip.content] as const) ?? STRATEGIES;
-  const subjectName = detail?.subject_category ?? '확률과통계';
-  const taskTitle = detail?.todo_content ?? '수능특강 4강-7강 문제풀이';
-  const stageLabel = detail ? `Stage ${detail.stage_number} · ${detail.stage_name}` : 'Stage 2 · 심화 개념 정리';
-  const tutorName = detail?.tutor_name ?? '루미';
-  const duration = detail ? `${detail.recommended_time_min}~${detail.recommended_time_max}분` : '60~80분';
+  const strategies = detail?.studyTips.map(tip => [tip.title, tip.content] as const) ?? STRATEGIES;
+  const subjectName = detail?.subjectCategory ?? '확률과통계';
+  const taskTitle = detail?.todoContent ?? '수능특강 4강-7강 문제풀이';
+  const stageLabel = detail ? `Stage ${detail.stageNumber} · ${detail.stageName}` : 'Stage 2 · 심화 개념 정리';
+  const tutorName = detail?.tutorName ?? '루미';
+  const duration = detail ? `${detail.recommendedTimeMin}~${detail.recommendedTimeMax}분` : '60~80분';
 
   return <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}><View style={styles.scrim}><View style={[styles.sheet, { paddingBottom: bottom }]}>
     <View style={styles.header}><View style={styles.headerTop}><View style={styles.subjectBadge}><Text style={styles.subjectBadgeText}>{subjectName}</Text></View><Pressable accessibilityLabel="닫기" hitSlop={8} onPress={onClose}><Ionicons name="close" size={26} color="#242628" /></Pressable></View><View style={styles.titleRow}><View style={styles.titleCopy}><Text style={styles.title}>{taskTitle}</Text><Text style={styles.subtitle}>{stageLabel}</Text></View>{difficulty && <DifficultyScore score={difficulty} />}</View></View>

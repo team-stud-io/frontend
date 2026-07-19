@@ -44,24 +44,24 @@ export default function HomeScreen() {
   const allTasksCompleted = tasks.length > 0 && tasks.every(task => task.completed);
 
   useEffect(() => {
-    if (!home || home.home_state !== 'ACTIVE') return;
-    setTasks(home.subject_todos.flatMap(subject => subject.todos.map(todo => ({
-      id: String(todo.todo_id),
-      subject: subject.custom_subject_name ?? subject.subject_category,
+    if (!home || home.homeState !== 'ACTIVE') return;
+    setTasks(home.subjectTodos.flatMap(subject => subject.todos.map(todo => ({
+      id: String(todo.todoId),
+      subject: subject.customSubjectName ?? subject.subjectCategory,
       title: todo.content,
-      completed: todo.is_completed,
+      completed: todo.isCompleted,
       difficulty: null,
       strategyAvailable: true,
     }))));
   }, [home]);
 
   useEffect(() => {
-    if (!home?.reflection_submitted_today) {
+    if (!home?.reflectionSubmittedToday) {
       setTodayReflection(null);
       return;
     }
     void getTodayReflection().then(setTodayReflection);
-  }, [getTodayReflection, home?.reflection_submitted_today]);
+  }, [getTodayReflection, home?.reflectionSubmittedToday]);
 
   const toggleTask = (taskId: string) => {
     const task = tasks.find(item => item.id === taskId);
@@ -91,7 +91,7 @@ export default function HomeScreen() {
     }
   };
 
-  if (home?.home_state === 'EMPTY') {
+  if (home?.homeState === 'EMPTY') {
     return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={[styles.viewport, { paddingHorizontal: 20, justifyContent: 'center', gap: 16 }]}>
         <Text style={styles.sectionTitle}>AI 튜터를 만들어볼까요?</Text>
@@ -107,54 +107,54 @@ export default function HomeScreen() {
     </SafeAreaView>;
   }
 
-  if (home?.home_state === 'ACTIVE') {
-    const stage = home.current_stage;
-    const nextStage = home.next_stage;
-    const progressPercent = home.stage_progress?.progress_percent ?? 0;
+  if (home?.homeState === 'ACTIVE') {
+    const stage = home.currentStage;
+    const nextStage = home.nextStage;
+    const progressPercent = home.stageProgress?.progressPercent ?? 0;
     return <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.viewport}>
         <ScrollView ref={scrollRef} contentContainerStyle={[styles.content, { paddingBottom: 94 + insets.bottom }]} showsVerticalScrollIndicator={false}>
           <View style={styles.topBar}>
             <View style={styles.dateInfo}>
               <View style={styles.calendarIcon}><AssetIcon name="calendar" width={20} height={20} /></View>
-              <Text style={styles.dateText}>{home.today.date} · {home.today.day_of_week}</Text>
+              <Text style={styles.dateText}>{home.today.date} · {home.today.dayOfWeek}</Text>
             </View>
-            <Pressable accessibilityLabel="알림" style={{ opacity: home.has_unread_notification ? 1 : 0.45 }}><AssetIcon name="notificationActive" width={24} height={24} /></Pressable>
+            <Pressable accessibilityLabel="알림" style={{ opacity: home.hasUnreadNotification ? 1 : 0.45 }}><AssetIcon name="notificationActive" width={24} height={24} /></Pressable>
           </View>
 
           <View style={styles.dashboard}>
             <View style={styles.examCard}>
-              <View style={styles.ddayBadge}><Text style={styles.ddayText}>{home.dday ? `D-${home.dday.days_left}` : 'D-day'}</Text></View>
-              <Text style={styles.examTitle}>{home.dday?.exam_name ?? '시험 정보 없음'}</Text>
-              <Text style={styles.examBody}>{home.dday?.exam_date ?? ''}</Text>
+              <View style={styles.ddayBadge}><Text style={styles.ddayText}>{home.dday ? `D-${home.dday.daysLeft}` : 'D-day'}</Text></View>
+              <Text style={styles.examTitle}>{home.dday?.examName ?? '시험 정보 없음'}</Text>
+              <Text style={styles.examBody}>{home.dday?.examDate ?? ''}</Text>
             </View>
             <View style={styles.stageCard}>
               <Text style={styles.stageLabel}>현재 스테이지</Text>
-              <Text style={styles.stageBody}>Stage {home.stage_progress?.current_stage_number ?? '-'}</Text>
+              <Text style={styles.stageBody}>Stage {home.stageProgress?.currentStageNumber ?? '-'}</Text>
               <View style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progressPercent}%` }]} /></View>
               <Text style={styles.progressLabel}>{progressPercent}%</Text>
             </View>
           </View>
 
-          {home.tutor_message && <View style={styles.tutorCard}>
-            <View style={styles.tutorTitleRow}><View style={styles.tutorIcon}><Ionicons name="sparkles" size={17} color="#FFFFFF" /></View><Text style={styles.tutorTitle}>{home.tutor_message.tutor_name} 튜터</Text></View>
-            <Text style={styles.tutorBody}>{home.tutor_message.content}</Text>
+          {home.tutorMessage && <View style={styles.tutorCard}>
+            <View style={styles.tutorTitleRow}><View style={styles.tutorIcon}><Ionicons name="sparkles" size={17} color="#FFFFFF" /></View><Text style={styles.tutorTitle}>{home.tutorMessage.tutorName} 튜터</Text></View>
+            <Text style={styles.tutorBody}>{home.tutorMessage.content}</Text>
           </View>}
 
           {stage && <View style={styles.section}>
-            <View style={styles.stageChip}><Text style={styles.stageChipText}>STAGE {stage.stage_number}</Text></View>
-            <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{stage.stage_name}</Text><Text style={styles.sectionPeriod}>{stage.start_date} ~ {stage.end_date}</Text></View>
+            <View style={styles.stageChip}><Text style={styles.stageChipText}>STAGE {stage.stageNumber}</Text></View>
+            <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>{stage.stageName}</Text><Text style={styles.sectionPeriod}>{stage.startDate} ~ {stage.endDate}</Text></View>
             <View style={styles.stageProgress}><View style={styles.stageSegment}><View style={[styles.stageSegmentFill, { width: `${progressPercent}%` }]} /></View></View>
             <HomeTaskList tasks={tasks} onToggle={toggleTask} onSelectDifficulty={selectDifficulty} onOpenStrategy={openStrategy} />
           </View>}
 
           {nextStage && <View style={styles.nextStage}>
-            <View style={styles.nextStageCopy}><Text style={styles.nextStageTitle}>다음 스테이지</Text><Text style={styles.nextStageBody}>Stage {nextStage.stage_number} · {nextStage.stage_name}</Text></View>
+            <View style={styles.nextStageCopy}><Text style={styles.nextStageTitle}>다음 스테이지</Text><Text style={styles.nextStageBody}>Stage {nextStage.stageNumber} · {nextStage.stageName}</Text></View>
           </View>}
 
           <View style={styles.chatSection}>
-            <View style={styles.chatHeader}><View style={styles.chatTitleRow}><View style={styles.chatIcon}><Ionicons name="chatbubble-ellipses" size={15} color="#FFFFFF" /></View><Text style={styles.chatTitle}>{home.tutor_message?.tutor_name ?? 'AI'} 튜터</Text></View><Text style={styles.chatStatus}>{home.reflection_submitted_today ? '오늘 회고 제출 완료' : '오늘 아직 보고 안 함'}</Text></View>
-            {home.reflection_submitted_today ? <Text style={styles.chatPrompt}>{todayReflection?.content ?? '오늘의 회고가 다음 튜터 한마디에 반영됩니다.'}</Text> : <><View style={styles.chatBox}><TextInput value={message} onChangeText={setMessage} multiline maxLength={400} placeholder="오늘 공부하면서 어땠어?" placeholderTextColor="#A1A3A5" style={styles.chatInput} /><Pressable disabled={isSubmittingReflection || message.trim().length === 0} onPress={() => void submitReflection()} style={styles.sendButton}><Text style={styles.sendText}>{isSubmittingReflection ? '제출 중...' : '보내기'}</Text></Pressable></View><Text style={styles.wordCount}>{message.length}/400</Text></>}
+            <View style={styles.chatHeader}><View style={styles.chatTitleRow}><View style={styles.chatIcon}><Ionicons name="chatbubble-ellipses" size={15} color="#FFFFFF" /></View><Text style={styles.chatTitle}>{home.tutorMessage?.tutorName ?? 'AI'} 튜터</Text></View><Text style={styles.chatStatus}>{home.reflectionSubmittedToday ? '오늘 회고 제출 완료' : '오늘 아직 보고 안 함'}</Text></View>
+            {home.reflectionSubmittedToday ? <Text style={styles.chatPrompt}>{todayReflection?.content ?? '오늘의 회고가 다음 튜터 한마디에 반영됩니다.'}</Text> : <><View style={styles.chatBox}><TextInput value={message} onChangeText={setMessage} multiline maxLength={400} placeholder="오늘 공부하면서 어땠어?" placeholderTextColor="#A1A3A5" style={styles.chatInput} /><Pressable disabled={isSubmittingReflection || message.trim().length === 0} onPress={() => void submitReflection()} style={styles.sendButton}><Text style={styles.sendText}>{isSubmittingReflection ? '제출 중...' : '보내기'}</Text></Pressable></View><Text style={styles.wordCount}>{message.length}/400</Text></>}
           </View>
         </ScrollView>
         <TaskDetailBottomSheet visible={!!selectedTask} difficulty={selectedTask?.difficulty ?? null} detail={todoDetail} onClose={() => { setDetailTaskId(null); setTodoDetail(null); }} />
