@@ -1,62 +1,62 @@
 import { apiRequest, isBackendConfigured } from '../apiClient';
 
 export type HomeTodo = {
-  todo_id: number;
+  todoId: number;
   content: string;
-  is_completed: boolean;
-  display_order: number;
-  carried_over: boolean;
+  isCompleted: boolean;
+  displayOrder: number;
+  carriedOver: boolean;
 };
 
 export type HomeData = {
-  home_state: 'ACTIVE' | 'EMPTY';
-  today: { date: string; day_of_week: string };
-  has_unread_notification: boolean;
+  homeState: 'ACTIVE' | 'EMPTY';
+  today: { date: string; dayOfWeek: string };
+  hasUnreadNotification: boolean;
   dday: {
-    exam_type: string;
-    exam_name: string;
-    exam_date: string;
-    days_left: number;
+    examType: string;
+    examName: string;
+    examDate: string;
+    daysLeft: number;
   } | null;
-  stage_progress: { current_stage_number: number; progress_percent: number } | null;
-  tutor_message: { tutor_name: string; content: string } | null;
-  current_stage: HomeStage | null;
+  stageProgress: { currentStageNumber: number; progressPercent: number } | null;
+  tutorMessage: { tutorName: string; content: string } | null;
+  currentStage: HomeStage | null;
   stages: HomeStage[];
-  next_stage: HomeStage | null;
-  subject_todos: Array<{
-    subject_tutor_id: number;
-    subject_category: string;
-    custom_subject_name: string | null;
+  nextStage: HomeStage | null;
+  subjectTodos: Array<{
+    subjectTutorId: number;
+    subjectCategory: string;
+    customSubjectName: string | null;
     todos: HomeTodo[];
   }>;
-  reflection_submitted_today: boolean;
+  reflectionSubmittedToday: boolean;
 };
 
 export type HomeStage = {
-  stage_id: number;
-  stage_number: number;
-  stage_name: string;
-  start_date: string;
-  end_date: string;
+  stageId: number;
+  stageNumber: number;
+  stageName: string;
+  startDate: string;
+  endDate: string;
 };
 
 export type TodoDetail = {
-  todo_id: number;
-  subject_category: string;
-  todo_content: string;
-  stage_number: number;
-  stage_name: string;
-  tutor_name: string;
-  recommended_time_min: number;
-  recommended_time_max: number;
-  study_tips: Array<{ display_order: number; title: string; content: string }>;
+  todoId: number;
+  subjectCategory: string;
+  todoContent: string;
+  stageNumber: number;
+  stageName: string;
+  tutorName: string;
+  recommendedTimeMin: number;
+  recommendedTimeMax: number;
+  studyTips: Array<{ displayOrder: number; title: string; content: string }>;
 };
 
 export type TodayReflection = {
-  reflection_id: number | null;
-  reflection_date: string;
+  reflectionId: number | null;
+  reflectionDate: string;
   content: string | null;
-  created_at: string | null;
+  createdAt: string | null;
 };
 
 class HomeService {
@@ -67,7 +67,7 @@ class HomeService {
   toggleTodo(todoId: number, isCompleted: boolean) {
     return apiRequest<HomeTodo>(`/todos/${todoId}`, {
       method: 'PATCH',
-      body: JSON.stringify({ is_completed: isCompleted }),
+      body: JSON.stringify({ isCompleted }),
     });
   }
 

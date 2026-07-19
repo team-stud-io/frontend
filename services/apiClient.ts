@@ -45,6 +45,36 @@ export function getApiErrorMessage(error: unknown): string {
 
 const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '');
 
+function toSnakeCase(value: string) {
+  return value.replace(/[A-Z]/g, character => `_${character.toLowerCase()}`);
+}
+
+function toCamelCase(value: string) {
+  return value.replace(/_([a-z])/g, (_, character: string) => character.toUpperCase());
+}
+
+function remapJsonKeys(value: unknown, mapKey: (key: string) => string): unknown {
+  if (Array.isArray(value)) return value.map(item => remapJsonKeys(item, mapKey));
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [
+      mapKey(key),
+      remapJsonKeys(item, mapKey),
+    ])
+  );
+}
+
+function toSnakeCaseJsonBody(body: RequestInit['body'], contentType: string | null) {
+  if (typeof body !== 'string' || !contentType?.includes('application/json')) return body;
+
+  try {
+    return JSON.stringify(remapJsonKeys(JSON.parse(body), toSnakeCase));
+  } catch {
+    return body;
+  }
+}
+
 export function isBackendConfigured() {
   return Boolean(baseUrl);
 }
@@ -62,10 +92,11 @@ export async function apiRequest<T>(
   if (options.body && !isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
   }
+  const body = toSnakeCaseJsonBody(options.body, headers.get('Content-Type'));
 
   let response: Response;
   try {
-    response = await fetch(`${baseUrl}${path}`, { ...options, headers });
+    response = await fetch(`${baseUrl}${path}`, { ...options, body, headers });
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') throw error;
     throw new ApiError('네트워크 연결에 실패했습니다.');
@@ -95,6 +126,6 @@ export async function apiRequest<T>(
   }
 
   return envelope && typeof envelope === 'object' && 'data' in envelope
-    ? envelope.data as T
-    : payload as T;
+    ? remapJsonKeys(envelope.data, toCamelCase) as T
+    : remapJsonKeys(payload, toCamelCase) as T;
 }
