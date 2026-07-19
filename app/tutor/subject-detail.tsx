@@ -1,10 +1,11 @@
 
 
 
+import Ionicons from '@expo/vector-icons/Ionicons';
+import * as ImagePicker from 'expo-image-picker';
 import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   Text,
@@ -31,7 +32,6 @@ import {
 import { subjectDetailStyles as styles } from '../../components/tutor/subject-detail/styles';
 import { useTutorDraft } from '../../components/tutor/TutorDraftContext';
 import { Colors } from '../../constants/colors';
-import { useSaveTutorSubject } from '../../hooks/useSaveTutorSubject';
 
 type DetailTab = 'range' | 'style' | 'materials';
 const TABS: { id: DetailTab; label: string }[] = [
@@ -99,51 +99,74 @@ function getFirstParam(value: string | string[] | undefined, fallback: string) {
   return value ?? fallback;
 }
 
+function selectedIndex(options: string[], value: string | undefined, fallback: number) {
+  const index = value ? options.indexOf(value) : -1;
+  return index >= 0 ? index : fallback;
+}
+
+function selectedDetailSubjects(detailSubject: string | undefined, options: string[], fallback: string[]) {
+  if (!detailSubject) return fallback;
+  const selected = detailSubject.split(',').map(value => value.trim()).filter(value => options.includes(value));
+  return selected.length ? selected : fallback;
+}
+
+function progressValue(progress: string | undefined, fallback: number) {
+  const parsed = Number.parseInt(progress ?? '', 10);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
 export default function SubjectDetailScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const params = useLocalSearchParams<{ subject?: string }>();
+  const params = useLocalSearchParams<{ subject?: string; subjectId?: string }>();
   const { draft, upsertSubject } = useTutorDraft();
   const subjectName = getFirstParam(params.subject, '국어');
-  const savedSubject = draft.subjects.find(subject => subject.name === subjectName);
+  const subjectParamId = getFirstParam(params.subjectId, '');
+  const savedSubject = draft.subjects.find(subject => subject.id === subjectParamId)
+    ?? draft.subjects.find(subject => subject.name === subjectName);
   const subjectId = useMemo(
     () => savedSubject?.id ?? `${subjectName}-${Date.now()}`,
     [savedSubject?.id, subjectName]
   );
-  const { isSaving, saveSubject } = useSaveTutorSubject();
-  const isMath = isMathSubject(subjectName);
-  const isEnglish = isEnglishSubject(subjectName);
-  const isSocial = isSocialSubject(subjectName);
-  const isScience = isScienceSubject(subjectName);
+  const subjectCategory = savedSubject?.subjectCategory ?? subjectName;
+  const isMath = isMathSubject(subjectCategory);
+  const isEnglish = isEnglishSubject(subjectCategory);
+  const isSocial = isSocialSubject(subjectCategory);
+  const isScience = isScienceSubject(subjectCategory);
   const [activeTab, setActiveTab] = useState<DetailTab>('range');
   const [examRange, setExamRange] = useState(savedSubject?.range ?? '');
-  const [progress, setProgress] = useState(isMath || isEnglish ? 20 : 40);
-  const [selectedGrade, setSelectedGrade] = useState(0);
-  const [mockGrade, setMockGrade] = useState(isEnglish || isSocial ? 2 : 1);
-  const [confidence, setConfidence] = useState(isMath ? 2 : isEnglish || isSocial || isScience ? 1 : 0);
+  const [progress, setProgress] = useState(() => progressValue(savedSubject?.progress, isMath || isEnglish ? 20 : 40));
+  const [selectedGrade, setSelectedGrade] = useState(() => selectedIndex(GRADES, savedSubject?.targetGrade, 0));
+  const [mockGrade, setMockGrade] = useState(() => selectedIndex(MOCK_GRADES, savedSubject?.prevGrade, isEnglish || isSocial ? 2 : 1));
+  const [confidence, setConfidence] = useState(() => selectedIndex(CONFIDENCE, savedSubject?.confidenceLevel, isMath ? 2 : isEnglish || isSocial || isScience ? 1 : 0));
   const [weakPoint, setWeakPoint] = useState(savedSubject?.weakPoint ?? '');
-  const [socialTypes, setSocialTypes] = useState<string[]>(['한국지리']);
-  const [scienceTypes, setScienceTypes] = useState<string[]>(['물리학']);
+  const [socialTypes, setSocialTypes] = useState<string[]>(() => selectedDetailSubjects(savedSubject?.detailSubject, SOCIAL_TYPES, ['한국지리']));
+  const [scienceTypes, setScienceTypes] = useState<string[]>(() => selectedDetailSubjects(savedSubject?.detailSubject, SCIENCE_TYPES, ['물리학']));
+  const [hasStyleInput, setHasStyleInput] = useState(Boolean(savedSubject?.contentStyle));
   const [focusOptions, setFocusOptions] = useState<string[]>(
-    isMath ? ['교과서 본문', '프린트'] : ['교과서 본문']
+    savedSubject?.contentStyle?.examFocus ?? (isMath ? ['교과서 본문', '프린트'] : ['교과서 본문'])
   );
-  const [outsideOption, setOutsideOption] = useState('나옴');
-  const [similarityOption, setSimilarityOption] = useState('조금 다름');
-  const [priority, setPriority] = useState(2);
-  const [memoryRatio, setMemoryRatio] = useState(70);
-  const [socialMemory, setSocialMemory] = useState('이해·적용 중심');
-  const [socialChart, setSocialChart] = useState('자주 나옴');
-  const [calculationRatio, setCalculationRatio] = useState('가끔 나옴');
-  const [scienceConcept, setScienceConcept] = useState('원리 이해');
-  const [essayRatio, setEssayRatio] = useState(isScience ? 30 : isSocial ? 20 : isMath || isEnglish ? 40 : 25);
-  const [difficulty, setDifficulty] = useState(isScience ? 3 : 2);
-  const [teacherMemo, setTeacherMemo] = useState('');
-  const [materialOptions, setMaterialOptions] = useState<string[]>(savedSubject?.materials ?? ['교과서', '학교 프린트', '부교재']);
-  const [publisher, setPublisher] = useState('');
-  const [workbook, setWorkbook] = useState('');
-  const [printCount, setPrintCount] = useState('');
-  const [printUploads, setPrintUploads] = useState<UploadItem[]>([]);
-  const [examUploads, setExamUploads] = useState<UploadItem[]>([]);
+  const [outsideOption, setOutsideOption] = useState(savedSubject?.contentStyle?.supplementaryVariation ?? '나옴');
+  const [similarityOption, setSimilarityOption] = useState(savedSubject?.contentStyle?.mockExamSimilarity ?? '조금 다름');
+  const [priority, setPriority] = useState(() => selectedIndex(PRIORITY_OPTIONS, savedSubject?.contentStyle?.priorityMaterial, 2));
+  const [memoryRatio, setMemoryRatio] = useState(savedSubject?.contentStyle?.textbookMemorizationImportance ?? 70);
+  const [socialMemory, setSocialMemory] = useState(savedSubject?.contentStyle?.memorizationVsApplication ?? '이해·적용 중심');
+  const [socialChart, setSocialChart] = useState(savedSubject?.contentStyle?.graphProblemFrequency ?? '자주 나옴');
+  const [calculationRatio, setCalculationRatio] = useState(savedSubject?.contentStyle?.calculationProblemRatio ?? '가끔 나옴');
+  const [scienceConcept, setScienceConcept] = useState(savedSubject?.contentStyle?.conceptVsPrinciple ?? '원리 이해');
+  const [essayRatio, setEssayRatio] = useState(savedSubject?.contentStyle?.essayRatioPercent ?? (isScience ? 30 : isSocial ? 20 : isMath || isEnglish ? 40 : 25));
+  const [difficulty, setDifficulty] = useState(() => selectedIndex(DIFFICULTIES, savedSubject?.contentStyle?.difficultyLevel, isScience ? 3 : 2));
+  const [teacherMemo, setTeacherMemo] = useState(savedSubject?.contentStyle?.teacherMemo ?? '');
+  const [materialOptions, setMaterialOptions] = useState<string[]>(savedSubject?.materials ?? []);
+  const [publisher, setPublisher] = useState(savedSubject?.materialDetails?.textbookPublisher ?? '');
+  const [workbook, setWorkbook] = useState(savedSubject?.materialDetails?.problemBookName ?? '');
+  const [printCount, setPrintCount] = useState(savedSubject?.materialDetails?.printPageCount ?? '');
+  const [printUploads, setPrintUploads] = useState<UploadItem[]>(
+    () => (savedSubject?.printImages ?? []).map(image => ({ ...image, kind: 'image' as const }))
+  );
+  const [examUploads, setExamUploads] = useState<UploadItem[]>(
+    () => (savedSubject?.pastExamImages ?? []).map(image => ({ ...image, kind: 'image' as const }))
+  );
   const [uploadError, setUploadError] = useState<UploadErrorType | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
   const nextLabel = activeTab === 'materials' ? '완료' : '다음';
@@ -153,50 +176,60 @@ export default function SubjectDetailScreen() {
   }, [activeTab, examRange]);
 
   const goNext = async () => {
-    if (!isNextEnabled || isSaving) return;
+    if (!isNextEnabled) return;
     if (activeTab === 'range') setActiveTab('style');
     else if (activeTab === 'style') setActiveTab('materials');
     else {
-      try {
-        const response = await saveSubject({
-          subjectId,
-          subjectName,
-          examRange: examRange.trim(),
-          progress,
-          selectedGradeIndex: selectedGrade,
-          mockGradeIndex: mockGrade,
-          confidenceIndex: confidence,
-          weakPoint: weakPoint.trim(),
-          socialTypes,
-          scienceTypes,
-          focusOptions,
-          outsideOption,
-          similarityOption,
-          priorityIndex: priority,
-          memoryRatio,
-          socialMemory,
-          socialChart,
-          calculationRatio,
-          scienceConcept,
-          essayRatio,
-          difficultyIndex: difficulty,
-          teacherMemo: teacherMemo.trim(),
-          materials: materialOptions,
-          publisher: publisher.trim(),
-          workbook: workbook.trim(),
-          printCount: printCount.trim(),
-          printAttachments: printUploads,
-          examAttachments: examUploads,
-          scheduleSlots: savedSubject?.scheduleSlots,
-        });
-        upsertSubject(response.subject);
-        router.push('/tutor/step3' as Href);
-      } catch (error) {
-        Alert.alert(
-          '저장 실패',
-          error instanceof Error ? error.message : '잠시 후 다시 시도해 주세요.'
-        );
-      }
+      upsertSubject({
+        id: subjectId,
+        name: subjectName,
+        subjectCategory: savedSubject?.subjectCategory ?? subjectName,
+        customSubjectName: savedSubject?.customSubjectName ?? null,
+        detail: examRange.trim(),
+        status: 'done',
+        progress: `${progress}%`,
+        range: examRange.trim(),
+        detailSubject: isSocial ? socialTypes.join(', ') : isScience ? scienceTypes.join(', ') : undefined,
+        targetGrade: GRADES[selectedGrade],
+        prevGrade: MOCK_GRADES[mockGrade],
+        confidenceLevel: CONFIDENCE[confidence],
+        weakPoint: weakPoint.trim(),
+        materials: materialOptions,
+        materialDetails: publisher.trim() || workbook.trim() || printCount.trim() ? {
+          textbookPublisher: publisher.trim() || undefined,
+          problemBookName: workbook.trim() || undefined,
+          printPageCount: printCount.trim() || undefined,
+        } : undefined,
+        contentStyle: hasStyleInput ? {
+          examFocus: focusOptions,
+          essayRatioPercent: essayRatio,
+          difficultyLevel: DIFFICULTIES[difficulty],
+          teacherMemo: teacherMemo.trim() || undefined,
+          mockExamSimilarity: similarityOption,
+          priorityMaterial: PRIORITY_OPTIONS[priority],
+          textbookMemorizationImportance: memoryRatio,
+          supplementaryVariation: outsideOption,
+          externalPassageFrequency: outsideOption,
+          memorizationVsApplication: socialMemory,
+          graphProblemFrequency: socialChart,
+          calculationProblemRatio: calculationRatio,
+          conceptVsPrinciple: scienceConcept,
+        } : undefined,
+        printImages: printUploads.flatMap(upload => upload.uri && upload.mimeType ? [{
+          id: upload.id,
+          name: upload.name,
+          uri: upload.uri,
+          mimeType: upload.mimeType,
+        }] : []),
+        pastExamImages: examUploads.flatMap(upload => upload.uri && upload.mimeType ? [{
+          id: upload.id,
+          name: upload.name,
+          uri: upload.uri,
+          mimeType: upload.mimeType,
+        }] : []),
+        scheduleSlots: savedSubject?.scheduleSlots,
+      });
+      router.push('/tutor/step3' as Href);
     }
   };
 
@@ -207,6 +240,7 @@ export default function SubjectDetailScreen() {
   };
 
   const toggleFocus = (option: string) => {
+    setHasStyleInput(true);
     setFocusOptions(prev =>
       prev.includes(option) ? prev.filter(item => item !== option) : [...prev, option]
     );
@@ -254,7 +288,7 @@ export default function SubjectDetailScreen() {
     return '예) 수업 필기 위주, 고전 문법 꼭 나옴';
   };
 
-  const handleAddUpload = (
+  const handleAddUpload = async (
     uploads: UploadItem[],
     setUploads: React.Dispatch<React.SetStateAction<UploadItem[]>>
   ) => {
@@ -263,15 +297,26 @@ export default function SubjectDetailScreen() {
       return;
     }
 
-    const nextIndex = uploads.length + 1;
-    setUploads(prev => [
-      ...prev,
-      {
-        id: `${Date.now()}-${nextIndex}`,
-        name: nextIndex === 1 ? '(2024) 정규교재 예시.pdf' : `업로드 이미지 ${nextIndex}.png`,
-        kind: nextIndex === 1 ? 'file' : 'image',
-      },
-    ]);
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 1,
+    });
+    if (result.canceled) return;
+
+    const asset = result.assets[0];
+    const mimeType = asset?.mimeType;
+    if (!asset || (mimeType !== 'image/jpeg' && mimeType !== 'image/png')) {
+      setUploadError('format');
+      return;
+    }
+    setUploads(prev => [...prev, {
+      id: `${Date.now()}-${asset.fileName ?? 'image'}`,
+      name: asset.fileName ?? `image-${prev.length + 1}.${mimeType === 'image/png' ? 'png' : 'jpg'}`,
+      kind: 'image',
+      uri: asset.uri,
+      mimeType,
+    }]);
+    return;
   };
 
   const showUploadFormatError = () => setUploadError('format');
@@ -289,8 +334,8 @@ export default function SubjectDetailScreen() {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <View style={styles.header}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>←</Text>
+        <Pressable accessibilityLabel="뒤로가기" hitSlop={10} style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors['Text.Normal.Strong']} />
         </Pressable>
         <View style={[
           styles.subjectBadge,
@@ -411,12 +456,12 @@ export default function SubjectDetailScreen() {
                   <ChipRow
                     options={SIMILARITY_OPTIONS}
                     selectedValues={[similarityOption]}
-                    onPress={setSimilarityOption}
+                    onPress={option => { setHasStyleInput(true); setSimilarityOption(option); }}
                   />
                 </Field>
 
                 <Field label="시험 출제 1순위">
-                  <Segmented options={PRIORITY_OPTIONS} selectedIndex={priority} onSelect={setPriority} />
+                  <Segmented options={PRIORITY_OPTIONS} selectedIndex={priority} onSelect={index => { setHasStyleInput(true); setPriority(index); }} />
                 </Field>
               </>
             ) : isSocial ? (
@@ -425,7 +470,7 @@ export default function SubjectDetailScreen() {
                   <Segmented
                     options={SOCIAL_MEMORY_OPTIONS}
                     selectedIndex={SOCIAL_MEMORY_OPTIONS.indexOf(socialMemory)}
-                    onSelect={index => setSocialMemory(SOCIAL_MEMORY_OPTIONS[index])}
+                    onSelect={index => { setHasStyleInput(true); setSocialMemory(SOCIAL_MEMORY_OPTIONS[index]); }}
                   />
                 </Field>
 
@@ -433,7 +478,7 @@ export default function SubjectDetailScreen() {
                   <ChipRow
                     options={SOCIAL_CHART_OPTIONS}
                     selectedValues={[socialChart]}
-                    onPress={setSocialChart}
+                    onPress={option => { setHasStyleInput(true); setSocialChart(option); }}
                   />
                 </Field>
               </>
@@ -443,7 +488,7 @@ export default function SubjectDetailScreen() {
                   <Segmented
                     options={CALCULATION_OPTIONS}
                     selectedIndex={CALCULATION_OPTIONS.indexOf(calculationRatio)}
-                    onSelect={index => setCalculationRatio(CALCULATION_OPTIONS[index])}
+                    onSelect={index => { setHasStyleInput(true); setCalculationRatio(CALCULATION_OPTIONS[index]); }}
                   />
                 </Field>
 
@@ -451,19 +496,19 @@ export default function SubjectDetailScreen() {
                   <ChipRow
                     options={SCIENCE_CONCEPT_OPTIONS}
                     selectedValues={[scienceConcept]}
-                    onPress={setScienceConcept}
+                    onPress={option => { setHasStyleInput(true); setScienceConcept(option); }}
                   />
                 </Field>
               </>
             ) : isEnglish ? (
               <>
-                <SliderField label="교과서 본문 암기 중요도" value={memoryRatio} onChange={setMemoryRatio} />
+                <SliderField label="교과서 본문 암기 중요도" value={memoryRatio} onChange={value => { setHasStyleInput(true); setMemoryRatio(value); }} />
 
                 <Field label="부교재 · 모의고사 변형 출제">
                   <ChipRow
                     options={OUTSIDE_OPTIONS}
                     selectedValues={[outsideOption]}
-                    onPress={setOutsideOption}
+                    onPress={option => { setHasStyleInput(true); setOutsideOption(option); }}
                   />
                 </Field>
               </>
@@ -472,15 +517,15 @@ export default function SubjectDetailScreen() {
                 <ChipRow
                   options={OUTSIDE_OPTIONS}
                   selectedValues={[outsideOption]}
-                  onPress={setOutsideOption}
+                  onPress={option => { setHasStyleInput(true); setOutsideOption(option); }}
                 />
               </Field>
             )}
 
-            <SliderField label={isMath ? '서술형 비중' : '서술형'} value={essayRatio} onChange={setEssayRatio} />
+            <SliderField label={isMath ? '서술형 비중' : '서술형'} value={essayRatio} onChange={value => { setHasStyleInput(true); setEssayRatio(value); }} />
 
             <Field label="전체 난이도">
-              <Segmented options={DIFFICULTIES} selectedIndex={difficulty} onSelect={setDifficulty} />
+              <Segmented options={DIFFICULTIES} selectedIndex={difficulty} onSelect={index => { setHasStyleInput(true); setDifficulty(index); }} />
             </Field>
 
             <Field label="선생님 Tip / 메모">
@@ -489,7 +534,7 @@ export default function SubjectDetailScreen() {
                 placeholder={getMemoPlaceholder()}
                 placeholderTextColor={Colors['Text.Normal.Assistive']}
                 value={teacherMemo}
-                onChangeText={setTeacherMemo}
+                onChangeText={value => { setHasStyleInput(true); setTeacherMemo(value); }}
               />
             </Field>
           </>
@@ -562,8 +607,8 @@ export default function SubjectDetailScreen() {
           <Button label="이전" state="Default" onPress={goPrev} style={styles.prevButton} />
         )}
         <Button
-          label={isSaving ? '저장 중...' : nextLabel}
-          state={isNextEnabled && !isSaving ? 'Default' : 'Inactive'}
+          label={nextLabel}
+          state={isNextEnabled ? 'Default' : 'Inactive'}
           onPress={goNext}
           style={styles.nextButton}
         />

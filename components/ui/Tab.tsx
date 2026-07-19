@@ -48,7 +48,7 @@ export function Tab({
 const styles = StyleSheet.create({
 
   root: {
-    paddingVertical: 4,
+    paddingVertical: 8,
     paddingHorizontal: 16,
     justifyContent: 'center',
     alignItems: 'center',
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     color: Colors['Text.Normal.Assistive'],
     textAlign: 'center',
     fontFamily: 'Pretendard-Medium',
-    fontSize: 14,
+    fontSize: 16,
     lineHeight: 24,
     letterSpacing: -0.2,
   },

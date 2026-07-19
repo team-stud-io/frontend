@@ -27,7 +27,7 @@ export function HomeTaskList({ tasks, onToggle, onSelectDifficulty, onOpenStrate
         </Pressable>
         {canOpen ? <Pressable accessibilityRole="button" accessibilityLabel={`${task.title} 상세 보기`} onPress={() => onOpenStrategy(task)} style={[styles.taskContent, styles.taskRowInteractive]}><View style={styles.taskCopy}><Text style={[styles.subject, { color: task.completed ? '#AD36E3' : SUBJECT_COLORS[task.subject] ?? Colors['Fill.Primary.Normal'] }]}>{task.subject}</Text><Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text></View><Ionicons name="chevron-forward" size={20} color="#242628" /></Pressable> : <View style={styles.taskContent}><View style={styles.taskCopy}><Text style={[styles.subject, { color: task.completed ? '#AD36E3' : SUBJECT_COLORS[task.subject] ?? Colors['Fill.Primary.Normal'] }]}>{task.subject}</Text><Text style={[styles.taskTitle, task.completed && styles.taskTitleCompleted]}>{task.title}</Text></View><Ionicons name="chevron-forward" size={20} color="#242628" /></View>}
       </View>
-      {task.completed && <View style={styles.difficultyArea}>
+      {task.completed && task.showDifficultyPrompt && <View style={styles.difficultyArea}>
         <Text style={styles.difficultyPrompt}>✦ 다음 맞춤 전략을 위해 난이도를 알려주세요! ✦</Text>
         <View style={styles.difficultyChoices}>{([1, 2, 3, 4, 5] as Difficulty[]).map(score => {
           const selected = task.difficulty !== null && score <= task.difficulty;

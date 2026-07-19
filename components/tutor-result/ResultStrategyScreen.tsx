@@ -27,50 +27,67 @@ export function ResultStrategyScreen({
   if (!subject || !strategy) return null;
   const canExpand = strategy.errorProcess.length > 3;
   const errorProcess = errorProcessExpanded ? strategy.errorProcess : strategy.errorProcess.slice(0, 3);
+  const hasSuccessCase = strategy.successCase.tags.length > 0
+    || Boolean(strategy.successCase.body || strategy.successCase.profile || strategy.successCase.result);
 
   return (
     <View style={styles.screenStack}>
       <SubjectHeaderCard subject={subject} targetGradeLabel={strategy.targetGradeLabel} />
 
-      <View style={styles.sectionStack}>
-        <Text style={styles.sectionTitle}>이번 시험 과목 중요도</Text>
-        {strategy.feedback.map(item => (
-          <FeedbackCard key={item.label} label={item.label} body={item.body} />
-        ))}
-      </View>
-
-      <ResultListCard
-        title="오답 처리 프로세스"
-        actionLabel={canExpand ? (errorProcessExpanded ? '접기' : '더보기') : undefined}
-        items={errorProcess}
-        onAction={canExpand ? onToggleErrorProcess : undefined}
-      />
-
-      <View style={styles.sectionStack}>
-        <View style={styles.iconTitleRow}>
-          <Text style={styles.iconTitle}>▱</Text>
-          <Text style={styles.sectionTitle}>추천 교재 순서</Text>
-        </View>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ddayRow}>
-          {strategy.books.map(book => (
-            <BookCard key={`${book.rank}-${book.title}`} {...book} />
+      {strategy.feedback.length > 0 && (
+        <View style={styles.sectionStack}>
+          <Text style={styles.sectionTitle}>이번 시험 과목 중요도</Text>
+          {strategy.feedback.map(item => (
+            <FeedbackCard key={item.label} label={item.label} body={item.body} />
           ))}
-        </ScrollView>
-      </View>
-
-      <View style={styles.sectionStack}>
-        <View style={styles.sectionHeader}>
-          <View style={styles.iconTitleRow}>
-            <Text style={styles.iconTitle}>⌁</Text>
-            <Text style={styles.sectionTitle}>비슷한 상황의 합격 선배 케이스</Text>
-          </View>
-          <View style={styles.miniCharacter}>
-            <View style={styles.miniEye} />
-            <View style={styles.miniEye} />
-          </View>
         </View>
-        <SuccessCaseCard data={strategy.successCase} />
-      </View>
+      )}
+
+      {strategy.errorProcess.length > 0 && (
+        <ResultListCard
+          title={strategy.actionTitle ?? '오답 처리 프로세스'}
+          actionLabel={canExpand ? (errorProcessExpanded ? '접기' : '더보기') : undefined}
+          items={errorProcess}
+          onAction={canExpand ? onToggleErrorProcess : undefined}
+        />
+      )}
+
+      {strategy.weeklyInsights?.length ? (
+        <ResultListCard
+          title="주간 인사이트"
+          items={strategy.weeklyInsights.map((body, index) => ({ title: `${index + 1}`, body }))}
+        />
+      ) : null}
+
+      {strategy.books.length > 0 && (
+        <View style={styles.sectionStack}>
+          <View style={styles.iconTitleRow}>
+            <Text style={styles.iconTitle}>△</Text>
+            <Text style={styles.sectionTitle}>추천 교재 순서</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ddayRow}>
+            {strategy.books.map(book => (
+              <BookCard key={`${book.rank}-${book.title}`} {...book} />
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {hasSuccessCase && (
+        <View style={styles.sectionStack}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconTitleRow}>
+              <Text style={styles.iconTitle}>⌁</Text>
+              <Text style={styles.sectionTitle}>비슷한 상황의 합격 선배 케이스</Text>
+            </View>
+            <View style={styles.miniCharacter}>
+              <View style={styles.miniEye} />
+              <View style={styles.miniEye} />
+            </View>
+          </View>
+          <SuccessCaseCard data={strategy.successCase} />
+        </View>
+      )}
     </View>
   );
 }
@@ -98,7 +115,7 @@ function SubjectHeaderCard({
     <View style={styles.subjectHeaderCard}>
       <View style={styles.planSummaryCopy}>
         <Text style={styles.planSummaryTitle}>{subject.title}</Text>
-        <Text style={styles.planSummaryBody}>{targetGradeLabel} · 현재 진도 {subject.progress}%</Text>
+        <Text style={styles.planSummaryBody}>{targetGradeLabel ? `${targetGradeLabel} · ` : ''}현재 진도 {subject.progress}%</Text>
       </View>
       <Tag label={subject.tagLabel} size="M" variant={getTagVariant(subject.tone)} />
     </View>
@@ -144,9 +161,7 @@ function SuccessCaseCard({ data }: { data: TutorResultViewModel['strategies'][nu
           </View>
         ))}
       </View>
-      <Text style={styles.successBody}>
-        {data.body}
-      </Text>
+      <Text style={styles.successBody}>{data.body}</Text>
       <Text style={styles.successProfile}>{data.profile}</Text>
       <View style={styles.successResultTag}>
         <Text style={styles.successResultText}>{data.result}</Text>

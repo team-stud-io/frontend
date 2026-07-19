@@ -1,6 +1,7 @@
 
 
 
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { type Href, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
@@ -17,12 +18,12 @@ import { useTutorDraft } from '../../components/tutor/TutorDraftContext';
 import { Colors } from '../../constants/colors';
 
 const SUBJECTS = [
-  { id: 'korean',   label: '국어',     color: '#F04588' },
-  { id: 'english',  label: '영어',     color: '#3385FF' },
-  { id: 'math',     label: '수학',     color: '#48AD00' },
-  { id: 'social',   label: '사회탐구', color: '#F68D00' },
-  { id: 'science',  label: '과학탐구', color: '#00BDDE' },
-  { id: 'custom',   label: '직접 입력', color: '#A1A3A5' },
+  { id: 'korean',   label: '국어',      category: '국어', color: '#F04588' },
+  { id: 'english',  label: '영어',      category: '영어', color: '#3385FF' },
+  { id: 'math',     label: '수학',      category: '수학', color: '#48AD00' },
+  { id: 'social',   label: '사회탐구',  category: '사회탐구', color: '#F68D00', requiresCustomName: true },
+  { id: 'science',  label: '과학탐구',  category: '과학탐구', color: '#00BDDE', requiresCustomName: true },
+  { id: 'custom',   label: '직접 입력', category: '직접입력', color: '#A1A3A5', requiresCustomName: true },
 ];
 
 const MAX_SUBJECTS = 4;
@@ -48,11 +49,11 @@ function getDaysInMonth(year: number, month: number) {
 }
 
 type SubjectMap = Record<string, string[]>;
-type CustomSubjectMap = Record<string, string>;
+type CustomSubjectMap = Record<string, { name: string; category: string }>;
 
 export default function Step2Screen() {
   const router = useRouter();
-  const { updateExamDates } = useTutorDraft();
+  const { draft, updateExamDates, setSubjects } = useTutorDraft();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -60,6 +61,7 @@ export default function Step2Screen() {
   const [subjectMap, setSubjectMap] = useState<SubjectMap>({});
   const [customSubjects, setCustomSubjects] = useState<CustomSubjectMap>({});
   const [showDirectInput, setShowDirectInput] = useState(false);
+  const [pendingSubjectCategory, setPendingSubjectCategory] = useState<string | null>(null);
 
   const days = getDaysInMonth(year, month);
   const selectedKey = selectedDate ? `${year}-${month + 1}-${selectedDate}` : null;
@@ -85,8 +87,10 @@ export default function Step2Screen() {
   };
 
   const handleSubjectPress = (subjectId: string) => {
-    if (subjectId === 'custom') {
+    const subject = SUBJECTS.find(item => item.id === subjectId);
+    if (subject?.requiresCustomName) {
       if (!selectedKey) return;
+      setPendingSubjectCategory(subject.category);
       setShowDirectInput(true);
       return;
     }
@@ -102,7 +106,12 @@ export default function Step2Screen() {
 
   const getDotsForDate = (date: number) => {
     const key = `${year}-${month + 1}-${date}`;
-    return (subjectMap[key] ?? []).slice(0, 4).map(id => SUBJECTS.find(s => s.id === id)?.color ?? '#ccc');
+    return (subjectMap[key] ?? []).slice(0, 4).map(id => {
+      const category = customSubjects[id]?.category;
+      return SUBJECTS.find(subject => subject.category === category)?.color
+        ?? SUBJECTS.find(subject => subject.id === id)?.color
+        ?? '#ccc';
+    });
   };
 
   const handleCustomSubmit = (subjectName: string) => {
@@ -113,22 +122,49 @@ export default function Step2Screen() {
       return;
     }
 
-    const customId = `custom-${Date.now()}`;
-    setCustomSubjects(prev => ({ ...prev, [customId]: subjectName }));
+    const category = pendingSubjectCategory ?? '직접입력';
+    const prefix = category === '사회탐구' ? 'social' : category === '과학탐구' ? 'science' : 'custom';
+    const customId = `${prefix}-${Date.now()}`;
+    setCustomSubjects(prev => ({ ...prev, [customId]: { name: subjectName, category } }));
     setSubjectMap(prev => ({ ...prev, [selectedKey]: [...current, customId] }));
+    setPendingSubjectCategory(null);
     setShowDirectInput(false);
   };
 
   const hasAnySelection = Object.values(subjectMap).some(v => v.length > 0);
   const handleNext = () => {
-    updateExamDates(
-      Object.fromEntries(
-        Object.entries(subjectMap).map(([date, subjects]) => [
-          date,
-          subjects.map(subjectId => customSubjects[subjectId] ?? SUBJECTS.find(subject => subject.id === subjectId)?.label ?? subjectId),
-        ])
-      )
+    const examDates = Object.fromEntries(
+      Object.entries(subjectMap).map(([date, subjects]) => [
+        date,
+        subjects.map(subjectId => customSubjects[subjectId]?.name ?? SUBJECTS.find(subject => subject.id === subjectId)?.label ?? subjectId),
+      ])
     );
+    const dateSubjects = Array.from(
+      new Map(
+        Object.values(subjectMap)
+          .flatMap(subjectIds => subjectIds.map(subjectId => {
+            const customSubject = customSubjects[subjectId];
+            const subject = SUBJECTS.find(item => item.id === subjectId);
+            const name = customSubject?.name ?? subject?.label ?? subjectId;
+            const subjectCategory = customSubject?.category ?? subject?.category ?? name;
+            return {
+              id: `exam-${subjectId}`,
+              name,
+              subjectCategory,
+              customSubjectName: customSubject ? name : null,
+              detail: '과목 상세 정보를 입력하세요',
+              status: 'empty' as const,
+            };
+          }))
+          .map(subject => [subject.id, subject] as const)
+      ).values()
+    );
+    const additions = dateSubjects.filter(subject => !draft.subjects.some(existing =>
+      (existing.subjectCategory ?? existing.name) === subject.subjectCategory
+      && (existing.customSubjectName ?? null) === subject.customSubjectName
+    ));
+    if (additions.length) setSubjects([...draft.subjects, ...additions]);
+    updateExamDates(examDates);
     router.push('/tutor/step3' as Href);
   };
 
@@ -136,8 +172,8 @@ export default function Step2Screen() {
 
       <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
-        <Pressable style={styles.backButton} onPress={() => router.back()}>
-          <Text style={styles.backArrow}>←</Text>
+        <Pressable accessibilityLabel="뒤로가기" hitSlop={10} style={styles.backButton} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color={Colors['Text.Normal.Strong']} />
         </Pressable>
 
         <Text style={styles.title}>시험 날짜 설정</Text>
@@ -239,7 +275,7 @@ export default function Step2Screen() {
                 );
               })}
               {selectedSubjects
-                .filter(subjectId => subjectId.startsWith('custom-'))
+                .filter(subjectId => !SUBJECTS.some(subject => subject.id === subjectId))
                 .map(subjectId => (
                   <Pressable
                     key={subjectId}
@@ -253,7 +289,7 @@ export default function Step2Screen() {
                     style={[styles.subjectTag, styles.subjectTagSelected]}
                   >
                     <Text style={[styles.subjectTagText, styles.subjectTagTextSelected]}>
-                      {customSubjects[subjectId]}
+                      {customSubjects[subjectId]?.name}
                     </Text>
                   </Pressable>
                 ))}
@@ -278,7 +314,15 @@ export default function Step2Screen() {
         <View style={styles.directInputBackdrop}>
           <InputField
             onSubmit={handleCustomSubmit}
-            onCancel={() => setShowDirectInput(false)}
+            onCancel={() => {
+              setPendingSubjectCategory(null);
+              setShowDirectInput(false);
+            }}
+            placeholder={pendingSubjectCategory === '사회탐구'
+              ? '사회탐구 과목명을 입력하세요'
+              : pendingSubjectCategory === '과학탐구'
+                ? '과학탐구 과목명을 입력하세요'
+                : '과목명을 입력하세요'}
           />
         </View>
       </Modal>
@@ -292,8 +336,6 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 100 },
 
   backButton: { marginBottom: 16 },
-  backArrow: { fontSize: 24, color: Colors['Text.Normal.Normal'] },
-
   title: {
     fontFamily: 'Pretendard-Bold',
     fontSize: 24,

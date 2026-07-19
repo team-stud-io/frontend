@@ -6,5 +6,6 @@ export interface HomeTask {
   title: string;
   completed: boolean;
   difficulty: Difficulty | null;
+  showDifficultyPrompt?: boolean;
   strategyAvailable?: boolean;
 }
